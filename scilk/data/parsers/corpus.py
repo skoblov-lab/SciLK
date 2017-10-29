@@ -22,6 +22,7 @@ AbstractSentenceBorders = NamedTuple("AbstractSentenceBorders",
                                       ("body", SentenceBorders)])
 Abstract = Tuple[AbstractText, Optional[AbstractAnnotation],
                  Optional[AbstractSentenceBorders]]
+# Record: (abstract id, part type, text, annotation, sentence borders)
 Record = Tuple[int, Text, Text, Optional[Annotation], Optional[SentenceBorders]]
 
 

@@ -16,6 +16,9 @@ from scilk.data.parsers.corpus import TITLE, BODY, Abstract, AbstractAnnotation,
 from scilk.structures.intervals import Interval
 
 
+# TODO make a unified `parse` function :: (abstracts, annotations, Optional[sentence detector])
+
+
 def parse_abstracts(path: Text) -> List[AbstractText]:
     """
     Read chemdner abstracts

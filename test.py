@@ -48,7 +48,7 @@ class TestGenia(unittest.TestCase):
         Test of text_boundaries() function.
         :return:
         """
-        boundaries = genia.text_boundaries(texts)
+        boundaries = genia._segment_borders(texts)
         note(boundaries)
 
         self.assertTrue(all([boundaries[i][1] == boundaries[i + 1][0] for i in

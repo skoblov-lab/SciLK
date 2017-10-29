@@ -5,27 +5,26 @@ from itertools import starmap
 from numbers import Integral
 from typing import Sequence, NamedTuple, Tuple, Iterable, Text, Optional, List, \
     Iterator
-from xml.etree.ElementTree import Element, parse
+from xml.etree import ElementTree as ETree
 
 from fn import F
 from pyrsistent import v, pvector
 
 from scilk.data.parsers.corpus import AbstractAnnotation, AbstractText, \
-    ClassMapping, \
-    AnnotationError, LabeledInterval
+    ClassMapping, AnnotationError, LabeledInterval
 from scilk.structures.intervals import Interval
 
 ANNO_PATT = re.compile("G#(\w+)")
 SENTENCE_TAG = "sentence"
 ANNO_TAG = "sem"
-ARTICLE = "article"
+ARTICLE_TAG = "article"
 
 LevelAnnotation = NamedTuple("Annotation", [("level", int),
                                             ("anno", Sequence[Optional[Text]]),
                                             ("terminal", bool)])
 
 
-def flatten_sentence(sentence: Element) \
+def _flatten_sentence(sentence: ETree.Element) \
         -> List[Tuple[Text, Sequence[LevelAnnotation]]]:
     # TODO docs
     """
@@ -33,10 +32,10 @@ def flatten_sentence(sentence: Element) \
     :param sentence:
     :return: list of strings with corresponding annotations
     """
-    def isterminal(element: Element):
+    def isterminal(element: ETree.Element):
         return next(iter(element), None) is None
 
-    def getanno(element: Element):
+    def getanno(element: ETree.Element):
         return element.get(ANNO_TAG, None)
 
     stack = [(sentence, iter(sentence), v())]
@@ -59,13 +58,13 @@ def flatten_sentence(sentence: Element) \
     return list(zip(texts, annotations))
 
 
-def text_boundaries(texts: Iterable[Text]) -> List[Tuple[int, int]]:
+def _segment_borders(texts: Iterable[Text]) -> List[Tuple[int, int]]:
     # TODO docs
     """
-    Returns list of start/stop positions of words' starts/ends in `texts`.
+    Returns list of start/stop positions of segments' starts/ends in `texts`.
     :param texts: list of strings
     :return: list of (start position, stop position)
-    >>> text_boundaries(['amino acid', 'is any']) == [(0, 10), (10, 16)]
+    >>> _segment_borders(['amino acid', 'is any']) == [(0, 10), (10, 16)]
     True
     """
     def aggregate_boundaries(boundaries: pvector, text):
@@ -77,18 +76,15 @@ def text_boundaries(texts: Iterable[Text]) -> List[Tuple[int, int]]:
     return list(reduce(aggregate_boundaries, texts, v()))
 
 
-def parse_sentences(root: Element, mapping: ClassMapping,
-                    default: Integral = None) \
-        -> Tuple[Text, List[LabeledInterval]]:
+def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval]]:
     # TODO docs
     """
-    Get text form `root` Element with given mapping dictionary.
+    Get text from `root` Element with given mapping dictionary.
     :param root:
-    :param mapping:
-    :param default:
-    :return:
+    :return: joined text along with its annotations
     """
-    def wrap_interval(start: int, stop: int, levels: Sequence[LevelAnnotation]) -> LabeledInterval:
+    def wrap_iv(start: int, stop: int, levels: Sequence[LevelAnnotation]) \
+            -> LabeledInterval:
         """
         Wrap `start`, `stop` and `levels` into an Interval.
         :param start: start position
@@ -102,21 +98,20 @@ def parse_sentences(root: Element, mapping: ClassMapping,
         if not len(codes) == 1:
             raise AnnotationError(
                 "The annotation is either ambiguous or empty: {}".format(codes))
-        encoded = mapping.get(codes.pop(), default)
-        return Interval(start, stop, encoded) if encoded is not None else None
+        return Interval(start, stop, codes.pop())
 
     sentences = root.findall(SENTENCE_TAG)
-    flattened = reduce(op.iadd, map(flatten_sentence, sentences), [])
+    flattened = reduce(op.iadd, map(_flatten_sentence, sentences), [])
     texts, annotations = zip(*((txt, anno) for txt, anno in flattened
                                if txt is not None))
-    boundaries = text_boundaries(texts)
-    intervals = [wrap_interval(start, stop, levels)
+    boundaries = _segment_borders(texts)
+    intervals = [wrap_iv(start, stop, levels)
                  for (start, stop), levels in zip(boundaries, annotations)
                  if levels and levels[-1].terminal]
     return "".join(texts), list(filter(bool, intervals))
 
 
-def parse_corpus(path: Text, mapping: ClassMapping, default: Integral = None) \
+def parse(path: Text, mapping: ClassMapping, default: Integral = None) \
         -> List[Tuple[AbstractText, AbstractAnnotation]]:
     """
     Extract text from xml file `path`.
@@ -125,25 +120,27 @@ def parse_corpus(path: Text, mapping: ClassMapping, default: Integral = None) \
     :param default:
     :return:
     """
-    parser = F(parse_sentences, mapping=mapping, default=default)
+    parser = F(_parse_sentences, mapping=mapping, default=default)
 
-    def getid(article: Element) -> int:
+    def getid(article: ETree.Element) -> int:
         raw = article.find("articleinfo").find("bibliomisc").text
         return int(raw.replace("MEDLINE:", ""))
 
-    def accumulate_articles(root: Element) -> Iterator[Tuple[int, Element, Element]]:
+    def accumulate_articles(root: ETree.Element) \
+            -> Iterator[Tuple[int, ETree.Element, ETree.Element]]:
         """
         Collects articles inside `root`.
         :param root:
         :return:
         """
-        articles_ = root.findall(ARTICLE)
+        articles_ = root.findall(ARTICLE_TAG)
         ids = map(getid, articles_)
         title_roots = [article.find("title") for article in articles_]
         body_roots = [article.find("abstract") for article in articles_]
         return zip(ids, title_roots, body_roots)
 
-    def parse_article(id_: int, title_root: Element, body_root: Element) \
+    def parse_article(id_: int, title_root: ETree.Element,
+                      body_root: ETree.Element) \
             -> Tuple[AbstractText, AbstractAnnotation]:
         """
         Extract title and body texts from `title_root` and `body_root`.
@@ -158,7 +155,7 @@ def parse_corpus(path: Text, mapping: ClassMapping, default: Integral = None) \
         annotation = AbstractAnnotation(id_, title_anno, body_anno)
         return abstract, annotation
 
-    corpus = parse(path)
+    corpus = ETree.parse(path)
     articles = accumulate_articles(corpus)
     return list(starmap(parse_article, articles))
 
