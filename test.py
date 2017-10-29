@@ -6,7 +6,7 @@ from hypothesis import given, note
 from hypothesis import settings, strategies as st
 
 from scilk.data.parsers import genia
-from scilk.preprocessing import preprocessing
+from scilk.preprocessing import __preprocessing
 from scilk.structures import intervals
 
 MAX_TESTS = 1000
@@ -69,7 +69,7 @@ class TestSampling(unittest.TestCase):
         ivs = [intervals.Interval(arr[0], arr[-1] + 1) for arr in
                np.split(np.arange(length), split_points)[1:-1]]
 
-        sample_anno = preprocessing.annotate_sample(ncls, anno, ivs)
+        sample_anno = __preprocessing.annotate_sample(ncls, anno, ivs)
         sample_anno_cls = [set(iv_anno.nonzero()[-1])
                            for iv_anno in cast(Iterable[np.ndarray], sample_anno)]
         self.assertSequenceEqual([set(anno[iv.start:iv.stop]) for iv in ivs],
