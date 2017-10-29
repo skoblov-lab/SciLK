@@ -111,7 +111,7 @@ def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval]]:
     return "".join(texts), list(filter(bool, intervals))
 
 
-def parse(path: Text, mapping: ClassMapping, default: Integral = None) \
+def parse(path: Text) \
         -> List[Tuple[AbstractText, AbstractAnnotation]]:
     """
     Extract text from xml file `path`.
@@ -120,7 +120,6 @@ def parse(path: Text, mapping: ClassMapping, default: Integral = None) \
     :param default:
     :return:
     """
-    parser = F(_parse_sentences, mapping=mapping, default=default)
 
     def getid(article: ETree.Element) -> int:
         raw = article.find("articleinfo").find("bibliomisc").text
@@ -149,8 +148,8 @@ def parse(path: Text, mapping: ClassMapping, default: Integral = None) \
         :param body_root:
         :return:
         """
-        title_text, title_anno = parser(title_root)
-        body_text, body_anno = parser(body_root)
+        title_text, title_anno = _parse_sentences(title_root)
+        body_text, body_anno = _parse_sentences(body_root)
         abstract = AbstractText(id_, title_text, body_text)
         annotation = AbstractAnnotation(id_, title_anno, body_anno)
         return abstract, annotation
