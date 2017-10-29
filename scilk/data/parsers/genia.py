@@ -1,17 +1,15 @@
-import operator as op
-import re
-from functools import reduce
 from itertools import starmap
-from numbers import Integral
 from typing import Sequence, NamedTuple, Tuple, Iterable, Text, Optional, List, \
     Iterator
 from xml.etree import ElementTree as ETree
 
-from fn import F
+import operator as op
+import re
+from functools import reduce
 from pyrsistent import v, pvector
 
-from scilk.data.parsers.corpus import AbstractAnnotation, AbstractText, \
-    ClassMapping, AnnotationError, LabeledInterval
+from scilk.data.parsers.corpus import AbstractAnnotation, AbstractText, AbstractSentenceBorders, \
+    AnnotationError, LabeledInterval, Abstract, SentenceBorders
 from scilk.structures.intervals import Interval
 
 ANNO_PATT = re.compile("G#(\w+)")
@@ -32,6 +30,7 @@ def _flatten_sentence(sentence: ETree.Element) \
     :param sentence:
     :return: list of strings with corresponding annotations
     """
+
     def isterminal(element: ETree.Element):
         return next(iter(element), None) is None
 
@@ -67,6 +66,7 @@ def _segment_borders(texts: Iterable[Text]) -> List[Tuple[int, int]]:
     >>> _segment_borders(['amino acid', 'is any']) == [(0, 10), (10, 16)]
     True
     """
+
     def aggregate_boundaries(boundaries: pvector, text):
         return (
             boundaries + [(boundaries[-1][1], boundaries[-1][1] + len(text))]
@@ -76,13 +76,29 @@ def _segment_borders(texts: Iterable[Text]) -> List[Tuple[int, int]]:
     return list(reduce(aggregate_boundaries, texts, v()))
 
 
-def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval]]:
+def _sentences_borders(sentences: Iterable[ETree.Element]) -> SentenceBorders:
+    """
+    Applies _segment_borders to sentences
+    and corrects intervals to handle \n at the ends
+    of sentences in AbstractText returned by _parse_sentences
+    :param sentences: Iterable of ETree.Element objects each containing sentence's text.
+    Correct sentence segmentation is assumed
+    :return: List of Intervals with sentence borders and no Interval.data.
+    ~List[Interval[start, stop, None]]
+    """
+    sentences_j = ["".join(x.itertext()) for x in sentences]
+    borders = ((start + i, stop + i) for i, (start, stop) in enumerate(_segment_borders(sentences_j)))
+    return [Interval(start, stop) for (start, stop), _ in zip(borders, sentences_j)]
+
+
+def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval], SentenceBorders]:
     # TODO docs
     """
     Get text from `root` Element with given mapping dictionary.
     :param root:
     :return: joined text along with its annotations
     """
+
     def wrap_iv(start: int, stop: int, levels: Sequence[LevelAnnotation]) \
             -> LabeledInterval:
         """
@@ -108,16 +124,14 @@ def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval]]:
     intervals = [wrap_iv(start, stop, levels)
                  for (start, stop), levels in zip(boundaries, annotations)
                  if levels and levels[-1].terminal]
-    return "".join(texts), list(filter(bool, intervals))
+    return "".join(texts), list(filter(bool, intervals)), _sentences_borders(sentences)
 
 
 def parse(path: Text) \
-        -> List[Tuple[AbstractText, AbstractAnnotation]]:
+        -> List[Tuple[AbstractText, AbstractAnnotation, AbstractSentenceBorders]]:
     """
     Extract text from xml file `path`.
     :param path: xml file's path
-    :param mapping: mapping entity to number
-    :param default:
     :return:
     """
 
@@ -140,7 +154,7 @@ def parse(path: Text) \
 
     def parse_article(id_: int, title_root: ETree.Element,
                       body_root: ETree.Element) \
-            -> Tuple[AbstractText, AbstractAnnotation]:
+            -> Tuple[AbstractText, AbstractAnnotation, AbstractSentenceBorders]:
         """
         Extract title and body texts from `title_root` and `body_root`.
         :param id_: article's id
@@ -148,11 +162,12 @@ def parse(path: Text) \
         :param body_root:
         :return:
         """
-        title_text, title_anno = _parse_sentences(title_root)
-        body_text, body_anno = _parse_sentences(body_root)
+        title_text, title_anno, title_sent = _parse_sentences(title_root)
+        body_text, body_anno, body_sent = _parse_sentences(body_root)
         abstract = AbstractText(id_, title_text, body_text)
         annotation = AbstractAnnotation(id_, title_anno, body_anno)
-        return abstract, annotation
+        sent_borders = AbstractSentenceBorders(id_, title_sent, body_sent)
+        return abstract, annotation, sent_borders
 
     corpus = ETree.parse(path)
     articles = accumulate_articles(corpus)
