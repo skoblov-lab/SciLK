@@ -81,14 +81,15 @@ def _sentences_borders(sentences: Iterable[ETree.Element]) -> SentenceBorders:
     Applies _segment_borders to sentences and corrects intervals to handle 
     end-of-a-sentence symbol at the ends of sentences in AbstractText returned 
     by _parse_sentences
-    :param sentences: Iterable of ETree.Element objects each containing sentence's text.
-    Correct sentence segmentation is assumed
+    :param sentences: Iterable of ETree.Element objects each containing
+    sentence's text. Correct sentence segmentation is assumed
     :return: List of Intervals with sentence borders and no Interval.data.
     ~List[Interval[start, stop, None]]
     """
-    sentences_j = ["".join(x.itertext()) for x in sentences]
-    borders = ((start + i, stop + i) for i, (start, stop) in enumerate(_segment_borders(sentences_j)))
-    return [Interval(start, stop) for (start, stop), _ in zip(borders, sentences_j)]
+    sent_j = ["".join(x.itertext()) for x in sentences]
+    borders = ((start+i, stop+i)
+               for i, (start, stop) in enumerate(_segment_borders(sent_j)))
+    return [Interval(start, stop) for (start, stop), _ in zip(borders, sent_j)]
 
 
 def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval], SentenceBorders]:
@@ -124,7 +125,9 @@ def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval], 
     intervals = [wrap_iv(start, stop, levels)
                  for (start, stop), levels in zip(boundaries, annotations)
                  if levels and levels[-1].terminal]
-    return "".join(texts).replace("\n", " "), list(filter(bool, intervals)), _sentences_borders(sentences)
+    return ("".join(texts).replace("\n", " ").rstrip(),
+            list(filter(bool, intervals)),
+            _sentences_borders(sentences))
 
 
 def parse(path: Text) \
