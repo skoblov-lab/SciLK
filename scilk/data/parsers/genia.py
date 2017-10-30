@@ -26,9 +26,9 @@ def _flatten_sentence(sentence: ETree.Element) \
         -> List[Tuple[Text, Sequence[LevelAnnotation]]]:
     # TODO docs
     """
-    Turn `sentence` Element from xml format to normal text.
-    :param sentence:
-    :return: list of strings with corresponding annotations
+    Convert a `sentence` XML Element object into normal text.
+    :param sentence: an sentence XML node
+    :return: a list of strings with corresponding annotations
     """
 
     def isterminal(element: ETree.Element):
@@ -60,8 +60,8 @@ def _flatten_sentence(sentence: ETree.Element) \
 def _segment_borders(texts: Iterable[Text]) -> List[Tuple[int, int]]:
     # TODO docs
     """
-    Returns list of start/stop positions of segments' starts/ends in `texts`.
-    :param texts: list of strings
+    Returns a list of cummulative start/stop positions for segments in `texts`.
+    :param texts: a list of strings
     :return: list of (start position, stop position)
     >>> _segment_borders(['amino acid', 'is any']) == [(0, 10), (10, 16)]
     True
@@ -78,9 +78,9 @@ def _segment_borders(texts: Iterable[Text]) -> List[Tuple[int, int]]:
 
 def _sentences_borders(sentences: Iterable[ETree.Element]) -> SentenceBorders:
     """
-    Applies _segment_borders to sentences
-    and corrects intervals to handle end-of-a-sentence symbol at the ends
-    of sentences in AbstractText returned by _parse_sentences
+    Applies _segment_borders to sentences and corrects intervals to handle 
+    end-of-a-sentence symbol at the ends of sentences in AbstractText returned 
+    by _parse_sentences
     :param sentences: Iterable of ETree.Element objects each containing sentence's text.
     Correct sentence segmentation is assumed
     :return: List of Intervals with sentence borders and no Interval.data.
@@ -124,7 +124,7 @@ def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval], 
     intervals = [wrap_iv(start, stop, levels)
                  for (start, stop), levels in zip(boundaries, annotations)
                  if levels and levels[-1].terminal]
-    return "".join(texts).replace('\n', ' '), list(filter(bool, intervals)), _sentences_borders(sentences)
+    return "".join(texts).replace("\n", " "), list(filter(bool, intervals)), _sentences_borders(sentences)
 
 
 def parse(path: Text) \
