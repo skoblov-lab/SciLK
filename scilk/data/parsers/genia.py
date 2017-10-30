@@ -130,8 +130,7 @@ def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval], 
             _sentences_borders(sentences))
 
 
-def parse(path: Text) \
-        -> List[Tuple[AbstractText, AbstractAnnotation, AbstractSentenceBorders]]:
+def parse(path: Text) -> List[Abstract]:
     """
     Extract text from xml file `path`.
     :param path: xml file's path
