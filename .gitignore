@@ -167,9 +167,8 @@ crashlytics-build.properties
 fabric.properties
 
 .idea/
-chemdner_corpus.tgz
 chemdner_corpus/
-chempred/chemdner.c
+genia_corpus/
 
 ### macOS template
 
@@ -287,3 +286,5 @@ dkms.conf
 
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
+
+local/
