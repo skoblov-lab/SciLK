@@ -35,7 +35,7 @@ def sent_tokenize(string: str) -> list:
 
 
 def regexp_word_tokenize(string: str) -> list:
-    #TODO: it doesn't split by underscore!
+    # TODO: it doesn't split by underscore!
     """
     Tokenize `string` into words.
     :param string:
@@ -241,7 +241,8 @@ def replace_unk(string: str, dictionary: dict) -> str:
     :param string:
     :param dictionary:
     :return:
-    >>> replace_unk('to amino') == 'UNK amino'
+    >>> dictionary = {'amino': 1}
+    >>> replace_unk('to amino', dictionary) == 'UNK amino'
     True
     """
     list_unk = list(map(lambda x: x if x in dictionary else UNK_TOKEN, string.split()))
@@ -254,7 +255,8 @@ def replace_unk_list(words: list, dictionary: dict) -> str:
     :param words:
     :param dictionary:
     :return:
-    >>> replace_unk_list(['to', 'amino']) == 'UNK amino'
+    >>> dictionary = {'amino': 1}
+    >>> replace_unk_list(['to', 'amino'], dictionary) == 'UNK amino'
     True
     """
     list_unk = list(map(lambda x: x if x in dictionary else UNK_TOKEN, words))
