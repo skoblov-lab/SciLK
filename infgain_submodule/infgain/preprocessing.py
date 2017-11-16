@@ -164,7 +164,19 @@ def tildas_from_dict(dictionary: dict) -> list:
     return list(filter(lambda x: TILDA_SEP in x, dictionary.keys()))
 
 
-def make_dict(ngrams: list, threshold=3) -> tuple:
+def make_dict(tokenized_sentences: list, maxn=3, threshold=3) -> tuple:
+    """
+    :param tokenized_sentences:
+    :param maxn:
+    :return: `dictionary` {token: id, ...} and `reversed_dictionary` {id: token, ...}
+    """
+    ngrams = list(map(lambda x: make_ngrams(x, maxn), tokenized_sentences))
+    ngrams = list(map(lambda x: remove_bad_ngrams(x), ngrams))
+    dictionary, reversed_dictionary = make_dict_from_ngrams(ngrams, threshold)
+    return dictionary, reversed_dictionary
+
+
+def make_dict_from_ngrams(ngrams: list, threshold=3) -> tuple:
     """
     :param ngrams: list of lists of ngram tuples
     :param threshold: min frequency of token

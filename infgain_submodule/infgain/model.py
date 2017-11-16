@@ -23,5 +23,17 @@
 #
 #     dict_ngram_id_by_tuple, dict_tilda_id_by_tuple = preproc.make_tupled_dicts(dictionary)
 
+###
+#
+# DataReader <- Tokenizer
+# Model <- TokenEmbedder
+# Embedder, Tokenizer
+#
+###
+
+class DataReader:
+    def __init__(self):
+        pass
+
 if __name__ == "__main__":
     raise RuntimeError
