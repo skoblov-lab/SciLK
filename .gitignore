@@ -167,7 +167,6 @@ crashlytics-build.properties
 fabric.properties
 
 .idea/
-chemdner_corpus/
 genia_corpus/
 
 ### macOS template
