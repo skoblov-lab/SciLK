@@ -10,7 +10,7 @@ from pyrsistent import v, pvector
 
 from scilk.data.parsers.corpus import AbstractAnnotation, AbstractText, AbstractSentenceBorders, \
     AnnotationError, LabeledInterval, Abstract, SentenceBorders
-from scilk.structures.intervals import Interval
+from scilk.util.intervals import Interval
 
 ANNO_PATT = re.compile("G#(\w+)")
 SENTENCE_TAG = "sentence"

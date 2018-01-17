@@ -2,7 +2,7 @@ from numbers import Integral
 from typing import Sequence, NamedTuple, Text, Iterable, Tuple, List, \
     Mapping, Optional
 
-from scilk.structures import intervals
+from scilk.util import intervals
 
 OTHER = "OTHER"
 TITLE = "T"

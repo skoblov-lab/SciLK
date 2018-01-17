@@ -1,7 +1,8 @@
 from functools import reduce
 from typing import Callable, Text, Tuple, Pattern, List, Iterable
 
-from scilk.structures.intervals import Interval
+import numpy as np
+from scilk.util.intervals import Interval
 
 
 Segmenter = Callable[[Text], Iterable[Text]]

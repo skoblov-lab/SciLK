@@ -6,8 +6,7 @@ from hypothesis import given, note
 from hypothesis import settings, strategies as st
 
 from scilk.data.parsers import genia
-from scilk.preprocessing import __preprocessing
-from scilk.structures import intervals
+from scilk.util import intervals
 
 MAX_TESTS = 1000
 

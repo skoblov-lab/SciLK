@@ -4,7 +4,7 @@ from typing import Tuple, Text, Sequence, Optional
 
 import numpy as np
 
-from scilk.structures.intervals import Interval, span, extract
+from scilk.util.intervals import Interval, span, extract
 from scilk.util.func import oldmap
 
 ProcessedSample = Tuple[int, Text, Sequence[Interval], Sequence[Text],

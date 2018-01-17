@@ -6,13 +6,14 @@
 
 import re
 from itertools import chain
-from typing import Mapping, Tuple, Text, Iterable, List
+from typing import Mapping, Tuple, Text, Iterable, List, overload
 
 import numpy as np
 from fn.func import identity
 from frozendict import frozendict
+from multipledispatch import dispatch
 
-from scilk.structures.intervals import Interval
+from scilk.util.intervals import Interval
 from scilk.util.func import oldmap, homogenous
 
 MAXLABEL = 255
@@ -92,6 +93,18 @@ class CharEncoder:
     def __len__(self):
         return len(self._chars) + 2  # including the pad and oov characters
 
+    @overload
+    def __call__(self, text: str) -> np.ndarray:
+        pass
+
+    @overload
+    def __call__(self, text: Iterable[str]) -> List[np.ndarray]:
+        pass
+
+    def __call__(self, text):
+        return (self.encode(text) if isinstance(text, str) else
+                [self.encode(item) for item in text])
+
     @property
     def oov(self):
         return self._oov
@@ -107,10 +120,9 @@ class CharEncoder:
             {char: i+1 for i, char in enumerate(set(nows))})
         return char_index
 
-    def encode(self, words: Iterable[Text]) -> List[np.ndarray]:
+    def encode(self, text: Text) -> np.ndarray:
         oov = self._oov
-        return [np.array([self._chars.get(c, oov) for c in w], dtype=np.int32)
-                for w in words]
+        return np.array([self._chars.get(c, oov) for c in text], dtype=np.int32)
 
 
 def encode_annotation(mapping, annotations: Iterable[Interval], size: int,

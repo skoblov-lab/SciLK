@@ -27,5 +27,5 @@ setup(
               "pandas",
               "hypothesis",
               "frozendict",
-              "tensorflow"]
+              "tensorflow", 'multipledispatch']
 )

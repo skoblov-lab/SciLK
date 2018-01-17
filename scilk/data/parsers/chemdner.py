@@ -13,7 +13,7 @@ from fn import F
 
 from scilk.data.parsers.corpus import TITLE, BODY, Abstract, AbstractAnnotation, \
     AbstractText, AbstractSentenceBorders
-from scilk.structures.intervals import Interval
+from scilk.util.intervals import Interval
 
 
 # TODO make a unified `parse` function :: (abstracts, annotations, Optional[sentence detector])

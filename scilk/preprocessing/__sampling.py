@@ -3,7 +3,7 @@ from typing import Sequence, Iterator, Iterable, Callable
 import numpy as np
 
 from scilk.encoding.encoding import EncodingError
-from scilk.structures.intervals import Interval
+from scilk.util.intervals import Interval
 
 Sample = Sequence[Interval]
 Sampler = Callable[[Sequence[Interval]], Iterable[Sample]]
