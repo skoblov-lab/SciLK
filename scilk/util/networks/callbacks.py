@@ -81,5 +81,18 @@ class Validator(callbacks.Callback):
         self.stream.flush()
 
 
+class Resetter(callbacks.Callback):
+    def __init__(self, layers):
+        # TODO docs
+        super().__init__()
+        self.layers = layers
+
+    def on_epoch_end(self, epoch, logs=None):
+        for layer in self.layers:
+            layer.reset_states()
+
+    on_epoch_begin = on_epoch_end
+
+
 if __name__ == '__main__':
     raise RuntimeError
