@@ -8,7 +8,7 @@ from scilk.util.intervals import Interval
 Segmenter = Callable[[Text], Iterable[Text]]
 
 
-def ptokenise(patterns: List[Pattern], text: Text, mask=" ") \
+def ptokenise(patterns: List[Pattern], text: Text, mask=' ') \
         -> List[Interval[Text]]:
     """
     Return intervals matched by `patterns`. The patterns are applied
@@ -33,5 +33,8 @@ def ptokenise(patterns: List[Pattern], text: Text, mask=" ") \
             sorted(reduce(match_mask, patterns, ([], text))[0])]
 
 
-if __name__ == "__main__":
+
+
+
+if __name__ == '__main__':
     raise RuntimeError
