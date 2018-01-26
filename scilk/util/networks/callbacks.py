@@ -1,10 +1,12 @@
 import sys
 from itertools import starmap
-from typing import Sequence, Mapping, Text, Callable, Optional, IO
+from typing import Sequence, Mapping, Text, Callable, Optional, IO, Any, Iterable
+import copy
 
 import numpy as np
 from fn.op import identity
 from keras import callbacks
+from keras.models import Model
 
 
 class Validator(callbacks.Callback):
@@ -81,17 +83,29 @@ class Validator(callbacks.Callback):
         self.stream.flush()
 
 
-class Resetter(callbacks.Callback):
-    def __init__(self, layers):
-        # TODO docs
+class Caller(callbacks.Callback):
+
+    def __init__(self, callables: Mapping[str, Iterable[Callable[[Model], Any]]]):
+        """
+        Call some callables on epoch/batch end/begin. Valid dictionary keys:
+        - on_batch_begin
+        - on_batch_end
+        - on_epoch_begin
+        - on_epoch_end
+        """
         super().__init__()
-        self.layers = layers
+        self.callables = {key: list(val) for key, val in callables.items()}
 
-    def on_epoch_end(self, epoch, logs=None):
-        for layer in self.layers:
-            layer.reset_states()
+    def call(self, when):
+        for f in self.callables[when]:
+            f(self.model)
 
-    on_epoch_begin = on_epoch_end
+    def __getattribute__(self, name):
+        return (
+            super().__getattribute__(name) if name not in self.callables else
+            (lambda epoch, logs=None: self.call(name)) if name.startswith('epoch')
+            else (lambda batch, logs=None: self.call(name))
+        )
 
 
 if __name__ == '__main__':
