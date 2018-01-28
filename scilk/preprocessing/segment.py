@@ -1,11 +1,34 @@
 from functools import reduce
-from typing import Callable, Text, Tuple, Pattern, List, Iterable
+from typing import Callable, Text, Tuple, Pattern, List, Iterable, Sequence, TextIO
 
 import numpy as np
 from scilk.util.intervals import Interval
 
 
-Segmenter = Callable[[Text], Iterable[Text]]
+Texts = Sequence[str]
+TextEncoder = Callable[[Texts], np.ndarray]
+TargetEncoder = Callable[[Sequence[Sequence[int]]]]
+TargetDecoder = Callable[[np.ndarray], Iterable[Iterable[int]]]
+
+
+class Segmenter:
+    def __init__(self, model, encoder: TextEncoder, decoder: TargetDecoder):
+        pass
+
+    def __call__(self, texts: Texts) -> List[List[int]]:
+        pass
+
+    @classmethod
+    def load(cls, path: str, **kwargs) -> 'Segmenter':
+        pass
+
+
+def breaks():
+    pass
+
+
+def stitches():
+    pass
 
 
 def ptokenise(patterns: List[Pattern], text: Text, mask=' ') \
@@ -31,9 +54,6 @@ def ptokenise(patterns: List[Pattern], text: Text, mask=' ') \
 
     return [Interval(start, stop, text[start:stop]) for start, stop in
             sorted(reduce(match_mask, patterns, ([], text))[0])]
-
-
-
 
 
 if __name__ == '__main__':
