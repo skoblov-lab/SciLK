@@ -126,5 +126,11 @@ def align_abstracts(abstracts: Iterable[AbstractText],
             for abstract in abstracts)
 
 
+def parse(abstracts: str, annotations: str, borders: str) -> List[Abstract]:
+    return list(align_abstracts(parse_abstracts(abstracts),
+                                parse_annotations(annotations),
+                                parse_borders(borders)))
+
+
 if __name__ == "__main__":
     raise RuntimeError
