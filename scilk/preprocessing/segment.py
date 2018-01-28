@@ -5,32 +5,6 @@ import numpy as np
 from scilk.util.intervals import Interval
 
 
-Texts = Sequence[str]
-TextEncoder = Callable[[Texts], np.ndarray]
-TargetEncoder = Callable[[Sequence[Sequence[int]]]]
-TargetDecoder = Callable[[np.ndarray], Iterable[Iterable[int]]]
-
-
-class Segmenter:
-    def __init__(self, model, encoder: TextEncoder, decoder: TargetDecoder):
-        pass
-
-    def __call__(self, texts: Texts) -> List[List[int]]:
-        pass
-
-    @classmethod
-    def load(cls, path: str, **kwargs) -> 'Segmenter':
-        pass
-
-
-def breaks():
-    pass
-
-
-def stitches():
-    pass
-
-
 def ptokenise(patterns: List[Pattern], text: Text, mask=' ') \
         -> List[Interval[Text]]:
     """
