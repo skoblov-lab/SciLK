@@ -5,7 +5,7 @@ import numpy as np
 from hypothesis import given, note
 from hypothesis import settings, strategies as st
 
-from scilk.data.parsers import genia
+from scilk.parsers import genia
 from scilk.util import intervals
 
 MAX_TESTS = 1000

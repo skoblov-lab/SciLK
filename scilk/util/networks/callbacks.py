@@ -100,12 +100,17 @@ class Caller(callbacks.Callback):
         for f in self.callables[when]:
             f(self.model)
 
-    def __getattribute__(self, name):
-        return (
-            super().__getattribute__(name) if name not in self.callables else
-            (lambda epoch, logs=None: self.call(name)) if name.startswith('epoch')
-            else (lambda batch, logs=None: self.call(name))
-        )
+    def on_batch_begin(self, batch, logs=None):
+        self.call('on_batch_begin')
+
+    def on_batch_end(self, batch, logs=None):
+        self.call('on_batch_end')
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.call('on_epoch_begin')
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.call('on_epoch_end')
 
 
 if __name__ == '__main__':
