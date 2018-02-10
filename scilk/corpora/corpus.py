@@ -1,8 +1,12 @@
 from numbers import Integral
 from typing import Sequence, NamedTuple, Text, Iterable, Tuple, List, \
     Mapping, Optional
+from itertools import chain
+
+from fn import F
 
 from scilk.util import intervals
+
 
 OTHER = "OTHER"
 TITLE = "T"
@@ -20,8 +24,7 @@ AbstractAnnotation = NamedTuple("AbstractAnnotation", [("id", int),
 AbstractSentenceBorders = NamedTuple("AbstractSentenceBorders",
                                      [("id", int), ("title", SentenceBorders),
                                       ("body", SentenceBorders)])
-Abstract = Tuple[AbstractText, Optional[AbstractAnnotation],
-                 Optional[AbstractSentenceBorders]]
+Abstract = Tuple[AbstractText, AbstractAnnotation, AbstractSentenceBorders]
 # Record: (abstract id, part type, text, annotation, sentence borders)
 Record = Tuple[int, Text, Text, Optional[Annotation], Optional[SentenceBorders]]
 
@@ -30,7 +33,7 @@ class AnnotationError(ValueError):
     pass
 
 
-def flatten_abstract(abstract: Abstract) -> List[Record]:
+def records(abstract: Abstract) -> List[Record]:
     """
     :return: list[(abstract id, source, text, annotation)]
     """
@@ -58,5 +61,20 @@ def parse_mapping(classmaps: Iterable[str]) -> ClassMapping:
         raise AnnotationError("Badly formatted mapping: {}".format(err))
 
 
-if __name__ == "__main__":
+def flatten_abstracts(abstracts: Iterable[Abstract]) -> \
+        List[Tuple[str, List[intervals.Interval], List[intervals.Interval]]]:
+    """
+    Flatten abstracts into a stream of tuples of form (text, annotations,
+    sentence borders)
+    :param abstracts:
+    :return:
+    """
+    return (F(chain.from_iterable) >> list)([
+        ((abstract.title, annotations.title, borders.title),
+         (abstract.body, annotations.body, borders.body))
+        for abstract, annotations, borders in abstracts
+    ])
+
+
+if __name__ == '__main__':
     raise RuntimeError

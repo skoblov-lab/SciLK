@@ -11,12 +11,9 @@ from typing import List, Tuple, Text, Iterable, Iterator
 import pandas as pd
 from fn import F
 
-from scilk.parsers.corpus import TITLE, BODY, Abstract, AbstractAnnotation, \
+from scilk.corpora.corpus import TITLE, BODY, Abstract, AbstractAnnotation, \
     AbstractText, AbstractSentenceBorders
 from scilk.util.intervals import Interval
-
-
-# TODO make a unified `parse` function :: (abstracts, annotations, Optional[sentence detector])
 
 
 def parse_abstracts(path: Text) -> List[AbstractText]:
@@ -30,7 +27,7 @@ def parse_abstracts(path: Text) -> List[AbstractText]:
     True
     """
     with open(path) as buffer:
-        parsed_buffer = (line.strip().split("\t") for line in buffer)
+        parsed_buffer = (line.strip().split('\t') for line in buffer)
         return [AbstractText(int(id_), title.rstrip(), body.rstrip())
                 for id_, title, body in parsed_buffer]
 
@@ -60,7 +57,7 @@ def parse_annotations(path: Text) -> List[AbstractAnnotation]:
         return Interval(int(start), int(stop), label)
 
     def parse_line(line):
-        id_, src, start, stop, text, label = line.split("\t")
+        id_, src, start, stop, text, label = line.split('\t')
         return int(id_), src, int(start), int(stop), text, label
 
     with open(path) as buffer:
@@ -85,14 +82,14 @@ def parse_annotations(path: Text) -> List[AbstractAnnotation]:
 def parse_borders(path: Text) -> List[AbstractSentenceBorders]:
     def pack_borders(id_: int, borders_: pd.DataFrame):
         src_mapped = {
-            src: [Interval(*map(int, b_str.split(":"))) for b_str in bs[2]]
+            src: [Interval(*map(int, b_str.split(':'))) for b_str in bs[2]]
             for src, bs in borders_.groupby(1)
         }
         title_borders = src_mapped.get(TITLE, [])
         body_borders = src_mapped.get(BODY, [])
         return AbstractSentenceBorders(id_, title_borders, body_borders)
 
-    borders = pd.read_csv(path, sep="\t", header=None)
+    borders = pd.read_csv(path, sep='\t', header=None)
     return ([] if not len(borders) else
             [pack_borders(id_, bs) for id_, bs in borders.groupby(0)])
 
@@ -114,10 +111,7 @@ def align_abstracts(abstracts: Iterable[AbstractText],
     def empty_borders(id_: int) -> AbstractSentenceBorders:
         return AbstractSentenceBorders(id_, [], [])
 
-    annotations = annotations if annotations is not None else []
-    borders = borders if borders is not None else []
-
-    anno_mapping = {anno.id: anno for anno in annotations}
+    anno_mapping = {anno.id: anno for anno in annotations or []}
     borders_mapping = {b.id: b for b in borders or []}
 
     return ((abstract,
@@ -132,5 +126,5 @@ def parse(abstracts: str, annotations: str, borders: str) -> List[Abstract]:
                                 parse_borders(borders)))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise RuntimeError

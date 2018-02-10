@@ -8,18 +8,18 @@ import re
 from functools import reduce
 from pyrsistent import v, pvector
 
-from scilk.parsers.corpus import AbstractAnnotation, AbstractText, AbstractSentenceBorders, \
+from scilk.corpora.corpus import AbstractAnnotation, AbstractText, AbstractSentenceBorders, \
     AnnotationError, LabeledInterval, Abstract, SentenceBorders
 from scilk.util.intervals import Interval
 
-ANNO_PATT = re.compile("G#(\w+)")
-SENTENCE_TAG = "sentence"
-ANNO_TAG = "sem"
-ARTICLE_TAG = "article"
+ANNO_PATT = re.compile('G#(\w+)')
+SENTENCE_TAG = 'sentence'
+ANNO_TAG = 'sem'
+ARTICLE_TAG = 'article'
 
-LevelAnnotation = NamedTuple("Annotation", [("level", int),
-                                            ("anno", Sequence[Optional[Text]]),
-                                            ("terminal", bool)])
+LevelAnnotation = NamedTuple('Annotation', [('level', int),
+                                            ('anno', Sequence[Optional[Text]]),
+                                            ('terminal', bool)])
 
 
 def _flatten_sentence(sentence: ETree.Element) \
@@ -86,13 +86,14 @@ def _sentences_borders(sentences: Iterable[ETree.Element]) -> SentenceBorders:
     :return: List of Intervals with sentence borders and no Interval.data.
     ~List[Interval[start, stop, None]]
     """
-    sent_j = ["".join(x.itertext()) for x in sentences]
+    sent_j = [''.join(x.itertext()) for x in sentences]
     borders = ((start+i, stop+i)
                for i, (start, stop) in enumerate(_segment_borders(sent_j)))
     return [Interval(start, stop) for (start, stop), _ in zip(borders, sent_j)]
 
 
-def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval], SentenceBorders]:
+def _parse_sentences(root: ETree.Element) \
+        -> Tuple[Text, List[LabeledInterval], SentenceBorders]:
     # TODO docs
     """
     Get text from `root` Element with given mapping dictionary.
@@ -110,11 +111,11 @@ def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval], 
         :return: Interval(`start`, `stop`, mappings)
         """
         # get the first nonempty annotation bottom to top
-        anno = next(filter(bool, (l.anno for l in reversed(levels))), "")
+        anno = next(filter(bool, (l.anno for l in reversed(levels))), '')
         codes = set(ANNO_PATT.findall(anno))
         if not len(codes) == 1:
             raise AnnotationError(
-                "The annotation is either ambiguous or empty: {}".format(codes))
+                'The annotation is either ambiguous or empty: {}'.format(codes))
         return Interval(start, stop, codes.pop())
 
     sentences = root.findall(SENTENCE_TAG)
@@ -125,9 +126,10 @@ def _parse_sentences(root: ETree.Element) -> Tuple[Text, List[LabeledInterval], 
     intervals = [wrap_iv(start, stop, levels)
                  for (start, stop), levels in zip(boundaries, annotations)
                  if levels and levels[-1].terminal]
-    return ("".join(texts).replace("\n", " ").rstrip(),
-            list(filter(bool, intervals)),
-            _sentences_borders(sentences))
+    text = ''.join(texts).replace('\n', ' ').rstrip()
+    annotation = [iv for iv in intervals if iv]
+    borders = _sentences_borders(sentences)
+    return text, annotation, borders
 
 
 def parse(path: Text) -> List[Abstract]:
@@ -138,8 +140,8 @@ def parse(path: Text) -> List[Abstract]:
     """
 
     def getid(article: ETree.Element) -> int:
-        raw = article.find("articleinfo").find("bibliomisc").text
-        return int(raw.replace("MEDLINE:", ""))
+        raw = article.find('articleinfo').find('bibliomisc').text
+        return int(raw.replace('MEDLINE:', ''))
 
     def accumulate_articles(root: ETree.Element) \
             -> Iterator[Tuple[int, ETree.Element, ETree.Element]]:
@@ -150,8 +152,8 @@ def parse(path: Text) -> List[Abstract]:
         """
         articles_ = root.findall(ARTICLE_TAG)
         ids = map(getid, articles_)
-        title_roots = [article.find("title") for article in articles_]
-        body_roots = [article.find("abstract") for article in articles_]
+        title_roots = [article.find('title') for article in articles_]
+        body_roots = [article.find('abstract') for article in articles_]
         return zip(ids, title_roots, body_roots)
 
     def parse_article(id_: int, title_root: ETree.Element,
@@ -176,5 +178,5 @@ def parse(path: Text) -> List[Abstract]:
     return list(starmap(parse_article, articles))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise RuntimeError
