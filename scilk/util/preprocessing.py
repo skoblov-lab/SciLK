@@ -10,7 +10,7 @@ from itertools import chain, repeat, count
 from math import ceil
 from numbers import Number
 from typing import List, Tuple, Optional, TypeVar, Callable, \
-    Sequence
+    Sequence, Union
 
 import numpy as np
 from binpacking import to_constant_bin_number
@@ -132,14 +132,23 @@ def binpack(nbins: int, weight: Callable[[T], Number], items: Sequence[T]) \
     )
 
 
-# def binextract(sources: Sequence[np.ndarray], bins: List[List[int]]) \
-#         -> List[np.ndarray]:
-#     extracted = [[np.concatenate(src[b]) for src in sources] for b in bins]
-#     maxlen = F(map, len) >> max
-#     return [join(src_group, maxlen(src_group))[0] for src_group in zip(*extracted)]
+def binextract(items: Union[Sequence[T], np.ndarray], bins: Sequence[Sequence[int]]) \
+        -> Union[List[List[T]], List[np.ndarray]]:
+    if not isinstance(items, (Sequence, np.ndarray)):
+        raise ValueError('`items` must be either a Sequence or a numpy array')
+    return (
+        [items[bin_] for bin_ in bins] if isinstance(items, np.ndarray) else
+        [[items[i] for i in bin_] for bin_ in bins]
+    )
 
 
 def chunksteps(size: int, array: np.ndarray) -> np.ndarray:
+    """
+    Chunk time steps
+    :param size:
+    :param array:
+    :return:
+    """
     nchunks = int(ceil(array.shape[1] / size))
     chunks = [array[:, start:start+size] for start in range(0, size*nchunks, size)]
     assert chunks[-1].shape[1] <= size
