@@ -54,7 +54,8 @@ def stack(arrays: Sequence[np.ndarray], shape: Optional[Sequence[int]], dtype,
     :param shape: target shape to broadcast each array to. The shape must
     specify one integer per dimension – the output will thus have shape
     `[len(arrays), *shape]`. If None the function will infer the maximal size
-    per dimension from `arrays`.
+    per dimension from `arrays`. To infer size for individual dimension(s)
+    use -1.
     :param dtype: output data type
     :param filler: a value to fill in the empty space.
     :param trim: trim arrays to fit the `shape`.
@@ -63,13 +64,21 @@ def stack(arrays: Sequence[np.ndarray], shape: Optional[Sequence[int]], dtype,
     trimming, while trimming is disabled; + all cases specified in function
     `maxshape`
     :return: stacked arrays, a boolean mask (empty positions are False).
-    >>> import random
-    >>> length = 100
+    >>> from random import choice
+    >>> maxlen = 100
     >>> ntests = 10000
-    >>> arrays = [np.random.randint(0, 127, size=random.randint(1, length))
-    ...           for _ in range(ntests)]
-    >>> stacked, masks = stack(arrays, [length], np.int)
-    >>> all((arr == s[m]).all() for arr, s, m in zip(arrays, stacked, masks))
+    >>> lengths = range(10, maxlen+1, 2)
+    >>> arrays = [
+    ...    np.random.randint(0, 127, size=choice(lengths)).reshape((2, -1))
+    ...    for _ in range(ntests)
+    ... ]
+    >>> stacked, masks = stack(arrays, [-1, maxlen], np.int)
+    >>> all((arr.flatten() == s[m].flatten()).all()
+    ...     for arr, s, m in zip(arrays, stacked, masks))
+    True
+    >>> stacked, masks = stack(arrays, [2, -1], np.int)
+    >>> all((arr.flatten() == s[m].flatten()).all()
+    ...     for arr, s, m in zip(arrays, stacked, masks))
     True
     """
     def slices(limits: Tuple[int], array: np.ndarray) -> List[slice]:
@@ -82,11 +91,17 @@ def stack(arrays: Sequence[np.ndarray], shape: Optional[Sequence[int]], dtype,
     if shape is not None and len(shape) != ndim:
         raise ValueError("`shape`'s dimensionality doesn't match that of "
                          "`arrays`")
-    maxshape_ = maxshape(arrays)
-    if not (shape is None or trim or all(a <= b for a, b in zip(maxshape_, shape))):
+    if shape is not None and any(s < 1 and s != -1 for s in shape):
+        raise ValueError('the only allowed non-positive value in `shape` is -1')
+    # infer size across all dimensions
+    inferred = np.array(maxshape(arrays))
+    # mix inferred and requested sizes where requested
+    limits = (inferred if shape is None else
+              np.where(np.array(shape) == -1, inferred, shape))
+    # make sure everything fits fine
+    if not (shape is None or trim or (inferred <= limits).all()):
         raise ValueError("can't broadcast all arrays to `shape` without "
                          "trimming")
-    limits = shape or maxshape_
     stacked = np.full([len(arrays), *limits], filler, dtype=dtype)
     mask = np.zeros([len(arrays), *limits], dtype=bool)
     for i, arr, slices_ in zip(count(), arrays, map(F(slices, limits), arrays)):
