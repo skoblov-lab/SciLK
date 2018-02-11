@@ -16,6 +16,7 @@ import numpy as np
 from binpacking import to_constant_bin_number
 from fn import F
 
+
 T = TypeVar('T')
 
 
@@ -86,7 +87,7 @@ def stack(arrays: Sequence[np.ndarray], shape: Optional[Sequence[int]], dtype,
         raise ValueError("can't broadcast all arrays to `shape` without "
                          "trimming")
     limits = shape or maxshape_
-    stacked = np.zeros([len(arrays), *limits], dtype=dtype)
+    stacked = np.full([len(arrays), *limits], filler, dtype=dtype)
     mask = np.zeros([len(arrays), *limits], dtype=bool)
     for i, arr, slices_ in zip(count(), arrays, map(F(slices, limits), arrays)):
         op.setitem(stacked, [i, *slices_], op.getitem(arr, slices_))
@@ -132,28 +133,41 @@ def binpack(nbins: int, weight: Callable[[T], Number], items: Sequence[T]) \
     )
 
 
-def binextract(items: Union[Sequence[T], np.ndarray], bins: Sequence[Sequence[int]]) \
+def binextract(source: Union[Sequence[T], np.ndarray], bins: Sequence[Sequence[int]]) \
         -> Union[List[List[T]], List[np.ndarray]]:
-    if not isinstance(items, (Sequence, np.ndarray)):
-        raise ValueError('`items` must be either a Sequence or a numpy array')
-    return (
-        [items[bin_] for bin_ in bins] if isinstance(items, np.ndarray) else
-        [[items[i] for i in bin_] for bin_ in bins]
-    )
+    """
+    'Materialise' bins, i.e. transform a nested list of indices into bins of
+    source items. See `binpack` for additional info.
+    :param source: source items
+    :param bins: a nested sequence if integers - indices referring to object
+    from `source`
+    :return:
+    """
+    if not isinstance(source, (Sequence, np.ndarray)):
+        raise ValueError('`source` must be either a Sequence or a numpy array')
+    try:
+        return (
+            [source[bin_] for bin_ in bins] if isinstance(source, np.ndarray) else
+            [[source[i] for i in bin_] for bin_ in bins]
+        )
+    except IndexError:
+        raise ValueError('`bins` contain indices outside of the `source` range')
 
 
-def chunksteps(size: int, array: np.ndarray) -> np.ndarray:
+def chunksteps(size: int, array: np.ndarray, filler=0) -> np.ndarray:
     """
     Chunk time steps
-    :param size:
-    :param array:
+    :param size: chunk size
+    :param array: an array to chunk. The array must have at lest two dimensions
+    :param filler: a value to fill in the empty space in the last chunk if
+    `array.shape[1] % size != 0`
     :return:
     """
     nchunks = int(ceil(array.shape[1] / size))
     chunks = [array[:, start:start+size] for start in range(0, size*nchunks, size)]
     assert chunks[-1].shape[1] <= size
     if chunks[-1].shape[1] < size:
-        chunk = np.zeros((array.shape[0], size, *array.shape[2:]),
+        chunk = np.full((array.shape[0], size, *array.shape[2:]), filler,
                          dtype=array.dtype)
         chunk[:, :chunks[-1].shape[1]] = chunks[-1]
         chunks[-1] = chunk
