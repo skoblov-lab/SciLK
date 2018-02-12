@@ -25,7 +25,7 @@ class Interval(Container, Generic[T]):
     def __iter__(self):
         return iter(range(self.start, self.stop))
 
-    def __eq__(self, other: "Interval"):
+    def __eq__(self, other: 'Interval'):
         return (self.start, self.stop, self.data) == (other.start, other.stop, other.data)
 
     def __hash__(self):
@@ -37,19 +37,23 @@ class Interval(Container, Generic[T]):
     def __bool__(self):
         return bool(len(self))
 
-    def __and__(self, other: "Interval"):
+    def __and__(self, other: 'Interval') -> 'Interval[List]':
         # TODO docs
         first, second = sorted([self, other], key=lambda iv: iv.start)
         return type(self)(first.start, second.stop, [first.data, second.data])
 
     def __repr__(self):
-        return "{}(start={}, stop={}, data={})".format(type(self).__name__,
+        return '{}(start={}, stop={}, data={})'.format(type(self).__name__,
                                                        self.start,
                                                        self.stop,
                                                        self.data)
 
-    def reload(self, value: T):
+    def reload(self, value: T) -> 'Interval[T]':
         return type(self)(self.start, self.stop, value)
+
+    def intersects(self, other: 'Interval') -> bool:
+        return (other.start <= self.start < other.stop or
+                self.start <= other.start < self.stop)
 
 
 def extract(sequence: Sequence[T], ivs: Iterable[Interval], offset=0) \

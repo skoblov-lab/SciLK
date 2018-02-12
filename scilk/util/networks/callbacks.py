@@ -97,7 +97,7 @@ class Caller(callbacks.Callback):
         self.callables = {key: list(val) for key, val in callables.items()}
 
     def call(self, when):
-        for f in self.callables[when]:
+        for f in self.callables.get(when, []):
             f(self.model)
 
     def on_batch_begin(self, batch, logs=None):
