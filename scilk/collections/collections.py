@@ -25,19 +25,14 @@ COLL_EXT = 'collection'
 
 class Collection:
 
-    def __init__(self, name: str):
-        """
-
-        :param name:
-        """
-        self.name = name
+    def __init__(self):
         self._entries = {}
         self._loaders = {}
         self._data = {}
         self._status = {}
 
     def __getattr__(self, entry: str) -> Any:
-        if entry not in self._entries:
+        if entry not in self._loaders:
             raise AttributeError('no entry named {}'.format(entry))
         # uninvoked dependencies are False, loading dependencies are None,
         # loaded dependencies are True
@@ -123,14 +118,14 @@ class Collection:
         :raises ModuleNotFoundError: can't load a loader's module
         :raises AttributeError: can't find a loader in its module
         """
-        collection = cls(name)
+        collection = cls()
         base = os.path.join(scilk.SCILK_ROOT, name)
         entries = joblib.load(os.path.join(base, '{}.{}'.format(name, COLL_EXT)))
         for entry in entries:
             collection.add(entry, *cls._load_entry(base, entry), postpone=True)
         return collection
 
-    def save(self):
+    def save(self, name):
         """
         Save a Collection to your SciLK root in a distributable form:
         - create a directory named after the Collection under the SciLK root
@@ -140,31 +135,31 @@ class Collection:
         :raises FileExistsError: there already is a saved Collection with
         identical name
         """
-        destination = os.path.join(scilk.SCILK_ROOT, self.name)
+        destination = os.path.join(scilk.SCILK_ROOT, name)
         try:
             os.makedirs(destination)
         except FileExistsError:
             raise FileExistsError("there is a collection named '{}' in your "
-                                  "SciLK root directory".format(self.name))
+                                  "SciLK root directory".format(name))
         # save individual entries
         for entry in self._loaders:
-            self._save_entry(entry)
+            self._save_entry(destination, entry)
         # save collection spec to prevent data corruption
         collection_spec_path = os.path.join(destination,
-                                            '{}.{}'.format(self.name, COLL_EXT))
+                                            '{}.{}'.format(name, COLL_EXT))
         joblib.dump(self.entries, collection_spec_path, 1)
 
     @staticmethod
     def _load_entry(base: str, entry: str) -> Tuple[Callable, Mapping]:
         # load data
-        data_spec_path = os.path.join(base, '{}.{}'.format(entry, DATA_EXT))
+        data_spec_path = os.path.join(base, entry, '{}.{}'.format(entry, DATA_EXT))
         try:
             data_spec = joblib.load(data_spec_path)
         except FileNotFoundError:
             raise FileNotFoundError("missing data for entry '{}'".format(entry))
-        data = {k: os.path.join(base, value) for k, value in data_spec.items()}
+        data = {k: os.path.join(base, entry, value) for k, value in data_spec.items()}
         # load loader
-        loader_spec_path = os.path.join(base, '{}.{}'.format(entry, LOADER_EXT))
+        loader_spec_path = os.path.join(base, entry, '{}.{}'.format(entry, LOADER_EXT))
         try:
             module, name = joblib.load(loader_spec_path)
         except FileNotFoundError:
@@ -181,20 +176,20 @@ class Collection:
                                  "'{}'".format(module, name, entry))
         return loader, data
 
-    def _save_entry(self, entry):
-        base = os.path.join(scilk.SCILK_ROOT, self.name, entry)
-        os.mkdir(base)
+    def _save_entry(self, base, entry):
+        destination = os.path.join(base, entry)
+        os.mkdir(destination)
         # save data and data spec
         data = self._data[entry]
         for _, path in data.items():
-            shutil.copy(path, os.path.join(base, os.path.basename(path)))
+            shutil.copy(path, os.path.join(destination, os.path.basename(path)))
         data_spec = {item: os.path.basename(path) for item, path in data.items()}
-        data_spec_path = os.path.join(base, '{}.{}'.format(entry, DATA_EXT))
+        data_spec_path = os.path.join(destination, '{}.{}'.format(entry, DATA_EXT))
         joblib.dump(data_spec, data_spec_path, 1)
         # save loader spec
         loader = self._loaders[entry]
         loader_spec = (inspect.getmodule(loader).__name__, loader.__name__)
-        loader_spec_path = os.path.join(base, '{}.{}'.format(entry, LOADER_EXT))
+        loader_spec_path = os.path.join(destination, '{}.{}'.format(entry, LOADER_EXT))
         joblib.dump(loader_spec, loader_spec_path, 1)
 
 
