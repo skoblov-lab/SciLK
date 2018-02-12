@@ -1,12 +1,17 @@
 import unittest
-from typing import Sequence, Iterable, cast
+from typing import Sequence, Iterable, cast, Mapping
+import tempfile
+import os
 
 import numpy as np
+import joblib
 from hypothesis import given, note
 from hypothesis import settings, strategies as st
 
 from scilk.corpora import genia
 from scilk.util import intervals
+from scilk.collections import collections
+import scilk
 
 MAX_TESTS = 1000
 
@@ -14,6 +19,23 @@ MAX_TESTS = 1000
 # strategies
 
 texts = st.text(st.characters(min_codepoint=32, max_codepoint=255), 0, 500, 1000)
+
+
+def loader_caller(collection: collections.Collection, data=None):
+
+    def caller(value: str):
+        return collection.translate(value)
+
+    return caller
+
+
+def loader_translate(collection: collections.Collection, data: dict):
+    mapping = joblib.load(data['mapping'])
+
+    def translate(value: str):
+        return mapping.get(value)
+
+    return translate
 
 
 # test cases
@@ -58,38 +80,21 @@ class TestGenia(unittest.TestCase):
             self.assertTrue(boundaries[0][0] == 0)
 
 
-class TestSampling(unittest.TestCase):
-
-    @given(st.integers(1, 10), st.integers(100, 500), st.integers(10, 50))
-    @settings(max_examples=MAX_TESTS)
-    def test_annotate_sample(self, ncls, length, nintervals):
-        anno = np.random.choice(ncls, length)
-        split_points = sorted(np.random.choice(length, nintervals, False))
-        ivs = [intervals.Interval(arr[0], arr[-1] + 1) for arr in
-               np.split(np.arange(length), split_points)[1:-1]]
-
-        sample_anno = __preprocessing.annotate_sample(ncls, anno, ivs)
-        sample_anno_cls = [set(iv_anno.nonzero()[-1])
-                           for iv_anno in cast(Iterable[np.ndarray], sample_anno)]
-        self.assertSequenceEqual([set(anno[iv.start:iv.stop]) for iv in ivs],
-                                 sample_anno_cls)
-        self.assertEqual(len(ivs), len(sample_anno))
-
-    # @given(st.integers(1, 10), st.integers(1, 100), st.integers(0, 100))
-    # @settings(max_examples=MAX_TESTS)
-    # def test_flatten_multilabel_annotation(self, ncls, nsteps, maxmixed):
-    #     anno = np.random.choice(ncls, nsteps)
-    #     nested = util.one_hot(ncls, anno)
-    #     mixed_steps = np.random.choice(nsteps, min(nsteps, maxmixed), False)
-    #     nested[mixed_steps, 0] = 1
-    #     self.assertTrue(
-    #         (anno == sampling.flatten_multilabel_annotation(nested)).all()
-    #     )
-    #     nested[mixed_steps, np.random.choice(ncls)] = 1
-    #     if ncls > 2 and (nested[:, 1:].sum(1) > 1).any():
-    #         with self.assertRaises(sampling.AmbiguousAnnotation):
-    #             sampling.flatten_multilabel_annotation(nested)
+class TestCollection(unittest.TestCase):
+    def test_collection(self):
+        with tempfile.TemporaryDirectory() as dirpath:
+            scilk.SCILK_ROOT = dirpath
+            mapping = dict(test='OK')
+            mapping_path = os.path.join(dirpath, 'mapping.joblib')
+            joblib.dump(mapping, mapping_path)
+            collection = collections.Collection()
+            collection.add('translate', loader_translate, dict(mapping=mapping_path))
+            collection.add('caller', loader_caller)
+            self.assertAlmostEqual(collection.caller('test'), 'OK')
+            collection.save(name='test')
+            collection = collections.Collection.load('test')
+            self.assertAlmostEqual(collection.caller('test'), 'OK')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

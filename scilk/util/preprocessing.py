@@ -189,5 +189,5 @@ def chunksteps(size: int, array: np.ndarray, filler=0) -> np.ndarray:
     return np.array(chunks)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise RuntimeError
