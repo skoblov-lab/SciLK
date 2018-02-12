@@ -94,6 +94,7 @@ class TestCollection(unittest.TestCase):
             collection.save(name='test')
             collection = collections.Collection.load('test')
             self.assertAlmostEqual(collection.caller('test'), 'OK')
+            self.assertEquals({'translate', 'caller'}, set(collection.entries))
 
 
 if __name__ == '__main__':
