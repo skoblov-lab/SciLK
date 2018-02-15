@@ -1,8 +1,9 @@
 import operator as op
 from itertools import chain
-from typing import Sequence, Iterable, TypeVar, List, Tuple, Callable, Mapping
+from typing import Sequence, Iterable, TypeVar, List, Tuple, Callable, Mapping, Dict
 
 import numpy as np
+from multipledispatch import dispatch
 from fn import F
 
 from scilk.util import preprocessing, intervals
@@ -10,10 +11,11 @@ from scilk.util import preprocessing, intervals
 T = TypeVar('T')
 
 
-def build_string_encoder(chars: str) \
+@dispatch(str)
+def build_charencoder(chars: str) \
         -> Tuple[int,  Mapping[str, int], Callable[[str], np.ndarray]]:
     """
-    Create a string encoder: a Callable from strings to integer arrays
+    Create a character-level encoder: a Callable from strings to integer arrays
     :param chars: a sequence of characters to consider; the function will return
     the OOV code for any non-ASCII character.
     :return: the OOV code, a character mapping representing non-OOV character
@@ -23,17 +25,35 @@ def build_string_encoder(chars: str) \
     charmap = {char: i + 1 for i, char in enumerate(charset)}
     oov = len(charmap) + 1
 
-    def stringencoder(text: str) -> np.ndarray:
+    def charencoder(text: str) -> np.ndarray:
         return np.fromiter((charmap.get(char, oov) for char in text), np.int32,
                            len(text))
 
-    return oov, charmap, stringencoder
+    return oov, charmap, charencoder
+
+
+@dispatch(dict)
+def build_charencoder(charmap: Dict[str, int]) \
+        -> Tuple[int,  Mapping[str, int], Callable[[str], np.ndarray]]:
+    """
+    Create a character-level encoder: a Callable from strings to integer arrays
+    :param charmap: a mapping from characters into integer codes
+    :return: the OOV code, a character mapping representing non-OOV character
+    encodings, an encoder
+    """
+    oov = len(charmap) + 1
+
+    def charencoder(text: str) -> np.ndarray:
+        return np.fromiter((charmap.get(char, oov) for char in text), np.int32,
+                           len(text))
+
+    return oov, charmap, charencoder
 
 
 def encode_tokens(stringencoder: Callable[[str], np.ndarray], maxlen: int,
                   tokens: Sequence[intervals.Interval[str]]) -> np.ndarray:
     """
-    Encode tokens
+    Encode tokens.
     :param stringencoder: a function mapping strings into integer arrays
     :param maxlen: token length limit
     :param tokens: either a Sequence of Intervals loaded with token strings
@@ -100,7 +120,7 @@ def decode_merged_predictions(merged: np.ndarray, bins: Sequence[Sequence[int]],
     :param lengths: text lengths
     """
     unmerged = unmerge_bins(merged, bins, lengths)
-    unbined = (F(map, reverse) >> list)(unbin(unmerged, bins))
+    unbined = (F(map, preprocessing.reverse) >> list)(unbin(unmerged, bins))
     return [np.nonzero(anno > 0.5)[0] for anno in unbined]
 
 
