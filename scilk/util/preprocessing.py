@@ -189,5 +189,8 @@ def chunksteps(size: int, array: np.ndarray, filler=0) -> np.ndarray:
     return np.array(chunks)
 
 
+reverse = op.itemgetter(slice(None, None, -1))  # reverse a Sequence or an array
+
+
 if __name__ == '__main__':
     raise RuntimeError

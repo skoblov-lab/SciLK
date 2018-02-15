@@ -1,6 +1,7 @@
 import sys
 from typing import TypeVar, Container, Generic, Optional, Sequence, Iterable, \
-    List, Iterator, overload
+    List, Iterator, Union, overload
+from numbers import Number
 
 import numpy as np
 
@@ -51,9 +52,14 @@ class Interval(Container, Generic[T]):
     def reload(self, value: T) -> 'Interval[T]':
         return type(self)(self.start, self.stop, value)
 
-    def intersects(self, other: 'Interval') -> bool:
-        return (other.start <= self.start < other.stop or
-                self.start <= other.start < self.stop)
+    def intersects(self, other: Union['Interval', Number]) -> bool:
+        if isinstance(other, type(self)):
+            return (other.start <= self.start < other.stop or
+                    self.start <= other.start < self.stop)
+        if isinstance(other, Number):
+            return self.start <= other < self.stop
+        raise ValueError('method argument `other` must be an instance of {} '
+                         'or a Number'.format(type(self).__name__))
 
 
 def extract(sequence: Sequence[T], ivs: Iterable[Interval], offset=0) \
