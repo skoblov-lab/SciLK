@@ -15,7 +15,7 @@ from scilk.collections import common
 def load_tokeniser(collection, data) \
         -> Callable[[List[str]], List[List[intervals.Interval[str]]]]:
     # load char encoder
-    charmap = joblib.load(data['characters.joblib'])
+    charmap = joblib.load(data['charmap'])
     oov, _, charencoder = common.build_charencoder(charmap)
 
     # build text encoder
@@ -42,7 +42,7 @@ def load_tokeniser(collection, data) \
     )
     model = models.Model(inputs, labels)
     model.compile(optimizer='Adam', loss='binary_crossentropy')
-    model.load_weights(data['tokeniser.h5'])
+    model.load_weights(data['tokeniser_weights'])
 
     # make a primary tokeniser
     primary_tokeniser = F(patterns.ptokenise, [re.compile('\w+|[^\s\w]')])
@@ -60,6 +60,8 @@ def load_tokeniser(collection, data) \
         return [np.nonzero(anno > 0.5)[0] for anno in unbined]
 
     def tokenise(texts: List[str]) -> List[List[intervals.Interval]]:
+        if not all(texts):
+            raise ValueError('empty strings are not allowed')
         # encode data
         encoded_texts = np.array(list(map(text_encoder, texts)))
         bins = preprocessing.binpack(batchsize, len, encoded_texts)
@@ -84,9 +86,6 @@ def load_tokeniser(collection, data) \
         ]
 
     return tokenise
-
-
-
 
 
 if __name__ == '__main__':
