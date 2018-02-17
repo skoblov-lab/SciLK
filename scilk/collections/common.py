@@ -26,6 +26,7 @@ def asciicharset(strings: Iterable[str]) -> List[str]:
 
 
 # TODO specify all exception in the docs
+# TODO patch dispatcher namespace overlapping
 
 
 def build_charencoder(corpus: Iterable[str]) \
@@ -57,17 +58,17 @@ def build_charencoder(corpus: Iterable[str]) \
                            len(string))
 
     @dispatch(str)
-    def encoder(string: str) -> np.ndarray:
+    def charencoder(string: str) -> np.ndarray:
         return encode_string(string)
 
     @dispatch(Iterable)
-    def encoder(strings: Iterable[str]):
+    def charencoder(strings: Iterable[str]):
         encoded_strings = list(map(encode_string, strings))
         if not encoded_strings:
             raise ValueError('there are no `strings`')
         return preprocessing.stack(encoded_strings, None, np.int32, 0)[0]
 
-    return oov, charmap, encoder
+    return oov, charmap, charencoder
 
 
 def build_wordencoder(embeddings: pd.DataFrame, transform: Callable[[str], str]) \
@@ -95,17 +96,17 @@ def build_wordencoder(embeddings: pd.DataFrame, transform: Callable[[str], str])
         return wordmap.get(transform(word), oov)
 
     @dispatch(str)
-    def encoder(word: str) -> np.ndarray:
+    def wordencoder(word: str) -> np.ndarray:
         return vectors[index(word)]
 
     @dispatch(Iterable)
-    def encoder(words: Iterable[str]) -> np.ndarray:
+    def wordencoder(words: Iterable[str]) -> np.ndarray:
         indices = list(map(index, words))
         if not indices:
             raise ValueError('there are no `words`')
         return np.vstack(vectors[indices])
 
-    return encoder
+    return wordencoder
 
 
 def read_glove(path: str) -> pd.DataFrame:
