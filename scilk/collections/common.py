@@ -73,7 +73,8 @@ def build_charencoder(corpus: Iterable[str], wordlen: int=None) \
         encoded_strings = list(map(encode_string, strings))
         if not encoded_strings:
             raise ValueError('there are no `strings`')
-        return preprocessing.stack(encoded_strings, [wordlen or -1], np.int32, 0)[0]
+        return preprocessing.stack(
+            encoded_strings, [wordlen or -1], np.int32, 0, True)[0]
 
     return oov, charmap, charencoder
 
