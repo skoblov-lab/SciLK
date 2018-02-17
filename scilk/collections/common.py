@@ -1,4 +1,5 @@
 import operator as op
+import csv
 from itertools import chain
 from typing import Sequence, Iterable, TypeVar, List, Tuple, Callable, Mapping, Union
 
@@ -105,6 +106,18 @@ def build_wordencoder(embeddings: pd.DataFrame, transform: Callable[[str], str])
         return np.vstack(vectors[indices])
 
     return encoder
+
+
+def read_glove(path: str) -> pd.DataFrame:
+    """
+    Read Glove embeddings in text format. The file can be compressed.
+    :param path:
+    :return:
+    """
+    return pd.read_table(
+        path, sep=' ', index_col=0, header=None, quoting=csv.QUOTE_NONE,
+        na_values=None, keep_default_na=False
+    ).astype(np.float32)
 
 
 def merge_bins(sources: Sequence[np.ndarray], bins: Sequence[Sequence[int]]) \
