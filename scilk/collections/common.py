@@ -129,9 +129,8 @@ def read_glove(path: str) -> pd.DataFrame:
     ).astype(np.float32)
 
 
-def merge_bins(sources: Sequence[np.ndarray], bins: Sequence[Sequence[int]],
-               dtype=None) \
-        -> np.ndarray:
+def merge_bins(sources: Union[np.ndarray, Sequence[np.ndarray]],
+               bins: Sequence[Sequence[int]], dtype=None) -> np.ndarray:
     """
     Merge sources within bins and stack them on top of each other.
     :param sources: a Sequence of source arrays.
@@ -141,7 +140,7 @@ def merge_bins(sources: Sequence[np.ndarray], bins: Sequence[Sequence[int]],
     instead
     :return: a merged arrays
     """
-    if not sources:
+    if not len(sources):
         raise ValueError('no `sources`')
     extracted = (
             F(preprocessing.binextract) >> (map, np.concatenate) >> list
