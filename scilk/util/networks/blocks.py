@@ -14,8 +14,8 @@ from keras import layers, backend as K
 def cnn(nfilters: Sequence[int],
         filter_width: Union[int, Sequence[int]],
         dropout: Union[Optional[float], Sequence[Optional[float]]]=None,
-        padding: Union[str, Sequence[str]]="same",
-        name_template: str="conv{}") \
+        padding: Union[str, Sequence[str]]='same',
+        name_template: str='conv{}') \
         -> Callable:
     # TODO extend documentation
     # TODO more tests
@@ -29,7 +29,7 @@ def cnn(nfilters: Sequence[int],
     def stack_conv(prev, param: Tuple[str, int, int, float, str]):
         name, nfilt, kern_size, drop_p, pad = param
         l = layers.Convolution1D(
-            nfilt, kern_size, activation="relu", name=name, padding=pad
+            nfilt, kern_size, activation='relu', name=name, padding=pad
         )(prev)
         return layers.Dropout(drop_p)(l) if drop_p else l
 
@@ -41,7 +41,7 @@ def cnn(nfilters: Sequence[int],
                else [padding] * len(nfilters))
 
     if not len(nfilters) == len(filter_width) == len(dropout) == len(padding):
-        raise ValueError("Parameter sequences have different lengths")
+        raise ValueError('Parameter sequences have different lengths')
 
     def conv(incomming):
         conv_names = (name_template.format(i+1) for i in range(0, len(nfilters)))
@@ -90,10 +90,10 @@ def rnn(nsteps: Sequence[int],
                 [rec_drop or 0] * len(nsteps))
 
     if not len(nsteps) == len(rec_drop) == len(inp_drop) == len(bi):
-        raise ValueError("Parameter sequences have different length")
+        raise ValueError('Parameter sequences have different length')
 
     def rec(incomming):
-        rec_names = ("rec{}".format(i) for i in range(1, len(nsteps)+1))
+        rec_names = ('rec{}'.format(i) for i in range(1, len(nsteps) + 1))
         parameters = zip(rec_names, nsteps, inp_drop, rec_drop, bi)
         rnn = reduce(stack_layers, parameters, incomming)
         return rnn
@@ -113,11 +113,11 @@ def wordemb(nwords: int, vectors: np.ndarray, mask: bool):
     return wordemb
 
 
-def charemb(nchar: int, maxlen: int, embsize: int, nunits: int,
+def charemb(input_dim: int, maxlen: int, embsize: int, nunits: int,
             indrop: float, recdrop: float, mask: bool, layer=layers.LSTM):
     # TODO docs
     def charemb(incomming):
-        emb = layers.embeddings.Embedding(input_dim=nchar,
+        emb = layers.embeddings.Embedding(input_dim=input_dim,
                                           output_dim=embsize,
                                           mask_zero=mask)(incomming)
         shape = (K.shape(incomming)[0], maxlen, K.shape(incomming)[2], embsize)
@@ -135,12 +135,11 @@ def charemb(nchar: int, maxlen: int, embsize: int, nunits: int,
                         go_backwards=True)(emb)[-2]
         emb = layers.concatenate([forward, reverse], axis=-1)
         # shape = (batch size, max sentence length, char hidden size)
-        emb = layers.Lambda(
-            lambda x: K.reshape(x, shape=[-1, shape[1], 2 * nunits]))(emb)
-        return emb
+        embshape = [incomming.shape[0].value or -1, shape[1], 2 * nunits]
+        return layers.Lambda(lambda x: K.reshape(x, shape=embshape))(emb)
 
     return charemb
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise RuntimeError

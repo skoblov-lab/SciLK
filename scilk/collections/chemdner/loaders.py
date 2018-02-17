@@ -60,6 +60,8 @@ def load_tokeniser(collection, data) \
         return [np.nonzero(anno > 0.5)[0] for anno in unbined]
 
     def tokenise(texts: List[str]) -> List[List[intervals.Interval]]:
+        if not texts:
+            raise ValueError('there are no `texts`')
         if not all(texts):
             raise ValueError('empty strings are not allowed')
         # encode data

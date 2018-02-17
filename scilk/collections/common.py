@@ -1,67 +1,110 @@
 import operator as op
 from itertools import chain
-from typing import Sequence, Iterable, TypeVar, List, Tuple, Callable, Mapping, Dict
+from typing import Sequence, Iterable, TypeVar, List, Tuple, Callable, Mapping, Union
 
 import numpy as np
 from multipledispatch import dispatch
 from fn import F
+import pandas as pd
 
 from scilk.util import preprocessing, intervals
 
 T = TypeVar('T')
 
+TextEncoder = Callable[[Union[str, Iterable[str]]], np.ndarray]
 
-@dispatch(str)
-def build_charencoder(chars: str) \
-        -> Tuple[int,  Mapping[str, int], Callable[[str], np.ndarray]]:
+
+def asciicharset(strings: Iterable[str]) -> List[str]:
     """
-    Create a character-level encoder: a Callable from strings to integer arrays
-    :param chars: a sequence of characters to consider; the function will return
-    the OOV code for any non-ASCII character.
+    Return a sorted list of unique ascii characters
+    :param strings: an iterable of strings to extract characters from
+    :return:
+    """
+    characters = chain.from_iterable(strings)
+    return sorted(set(filter(lambda x: ord(x) < 128, characters)))
+
+
+# TODO specify all exception in the docs
+
+
+def build_charencoder(corpus: Iterable[str]) \
+        -> Tuple[int,  Mapping[str, int], TextEncoder]:
+    """
+    Create a char-level encoder: a Callable, mapping strings into integer arrays.
+    Encoders dispatch on input type: if you pass a single string, you will get
+    a 1D array, if you pass an Iterable of strings, you will get a 2D array,
+    where row i encodes the i-th string in the Iterable. In the latter case the
+    second dimension will be as long as the longest string in the Iterable.
+    :param corpus: an Iterable of strings to extract characters from. The
+    encoder will map any non-ASCII character into the OOV code.
     :return: the OOV code, a character mapping representing non-OOV character
     encodings, an encoder
     """
-    charset = sorted(set(filter(lambda x: ord(x) < 128, chars)))
-    charmap = {char: i + 1 for i, char in enumerate(charset)}
+    try:
+        charmap = {char: i + 1 for i, char in enumerate(asciicharset(corpus))}
+    except TypeError:
+        raise ValueError('`corpus` can be either a string or an Iterable of '
+                         'strings')
+    if not charmap:
+        raise ValueError('the `corpus` is empty')
     oov = len(charmap) + 1
 
-    def charencoder(text: str) -> np.ndarray:
-        return np.fromiter((charmap.get(char, oov) for char in text), np.int32,
-                           len(text))
+    def encode_string(string: str) -> np.ndarray:
+        if not string:
+            raise ValueError("can't encode empty strings")
+        return np.fromiter((charmap.get(char, oov) for char in string), np.int32,
+                           len(string))
 
-    return oov, charmap, charencoder
+    @dispatch(str)
+    def encoder(string: str) -> np.ndarray:
+        return encode_string(string)
+
+    @dispatch(Iterable)
+    def encoder(strings: Iterable[str]):
+        encoded_strings = list(map(encode_string, strings))
+        if not encoded_strings:
+            raise ValueError('there are no `strings`')
+        return preprocessing.stack(encoded_strings, None, np.int32, 0)[0]
+
+    return oov, charmap, encoder
 
 
-@dispatch(dict)
-def build_charencoder(charmap: Dict[str, int]) \
-        -> Tuple[int,  Mapping[str, int], Callable[[str], np.ndarray]]:
+def build_wordencoder(embeddings: pd.DataFrame, transform: Callable[[str], str]) \
+        -> TextEncoder:
     """
-    Create a character-level encoder: a Callable from strings to integer arrays
-    :param charmap: a mapping from characters into integer codes
-    :return: the OOV code, a character mapping representing non-OOV character
-    encodings, an encoder
+    Create a word-level encoder: a Callable, mapping strings into integer arrays.
+    Encoders dispatch on input type: if you pass a single string, you will get
+    a 1D array, if you pass an Iterable of strings, you will get a 2D array,
+    where row i encodes the i-th string in the Iterable.
+    :param embeddings: a dataframe of word vectors indexed by words. The last
+    vector (row) is used to encode OOV words.
+    :return:
     """
-    oov = len(charmap) + 1
+    wordmap = {word: i for i, word in enumerate(embeddings.index)}
+    if not wordmap:
+        raise ValueError('empty `embeddings`')
+    if not all(isinstance(word, str) for word in wordmap):
+        raise ValueError('`embeddings` can be indexed by strings alone')
+    oov = wordmap[embeddings.index[-1]]
+    vectors = embeddings.as_matrix().astype(np.float32)
 
-    def charencoder(text: str) -> np.ndarray:
-        return np.fromiter((charmap.get(char, oov) for char in text), np.int32,
-                           len(text))
+    def index(word: str) -> int:
+        if not word:
+            raise ValueError("can't encode empty words")
+        return wordmap.get(transform(word), oov)
 
-    return oov, charmap, charencoder
+    @dispatch(str)
+    def encoder(word: str) -> np.ndarray:
+        return vectors[index(word)]
 
+    @dispatch(Iterable)
+    def encoder(words: Iterable[str]) -> np.ndarray:
+        indices = list(map(index, words))
+        if not indices:
+            raise ValueError('there are no `words`')
+        return np.vstack(vectors[indices])
 
-def encode_tokens(stringencoder: Callable[[str], np.ndarray], maxlen: int,
-                  tokens: Sequence[intervals.Interval[str]]) -> np.ndarray:
-    """
-    Encode tokens.
-    :param stringencoder: a function mapping strings into integer arrays
-    :param maxlen: token length limit
-    :param tokens: either a Sequence of Intervals loaded with token strings
-    """
-    tokens_strings = (tk.data for tk in tokens)
-    return preprocessing.stack(
-        list(map(stringencoder, tokens_strings)), [maxlen], np.int32, 0, True
-    )[0]
+    return encoder
 
 
 def merge_bins(sources: Sequence[np.ndarray], bins: Sequence[Sequence[int]]) \
