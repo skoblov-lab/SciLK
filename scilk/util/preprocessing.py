@@ -142,6 +142,8 @@ def binpack(nbins: int, weight: Callable[[T], Number], items: Sequence[T]) \
     stable for the output to be useful.
     :return: a nested list of integers representing positions in `items`
     """
+    if len(items) < nbins:
+        raise ValueError('There should be at lest `nbins` items')
     weighted = [(i, weight(item)) for i, item in enumerate(items)]
     return (F(map, F(map, op.itemgetter(0)) >> list) >> list)(
         to_constant_bin_number(weighted, nbins, weight_pos=1)
