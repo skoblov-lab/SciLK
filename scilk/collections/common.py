@@ -29,19 +29,26 @@ def asciicharset(strings: Iterable[str]) -> List[str]:
 # TODO patch dispatcher namespace overlapping
 
 
-def build_charencoder(corpus: Iterable[str]) \
+def build_charencoder(corpus: Iterable[str], wordlen: int=None) \
         -> Tuple[int,  Mapping[str, int], TextEncoder]:
     """
     Create a char-level encoder: a Callable, mapping strings into integer arrays.
     Encoders dispatch on input type: if you pass a single string, you will get
-    a 1D array, if you pass an Iterable of strings, you will get a 2D array,
-    where row i encodes the i-th string in the Iterable. In the latter case the
-    second dimension will be as long as the longest string in the Iterable.
+    a 1D array, if you pass an Iterable of strings, you will get a 2D array
+    where row i encodes the i-th string in the Iterable.
     :param corpus: an Iterable of strings to extract characters from. The
     encoder will map any non-ASCII character into the OOV code.
+    :param wordlen: when `wordlen` is None and an encoder receives an Iterable of
+    strings, the second dimension in the output array will be as long as the
+    longest string, otherwise it will be `wordlen` long. In the latter case
+    words exceeding `wordlen` will be trimmed. In both cases empty-spaces are
+    filled with zeros.
+    in the Iterable. If wordlen is not
     :return: the OOV code, a character mapping representing non-OOV character
     encodings, an encoder
     """
+    if wordlen and wordlen < 1:
+        raise ValueError('`wordlen` must be positive')
     try:
         charmap = {char: i + 1 for i, char in enumerate(asciicharset(corpus))}
     except TypeError:
@@ -66,7 +73,7 @@ def build_charencoder(corpus: Iterable[str]) \
         encoded_strings = list(map(encode_string, strings))
         if not encoded_strings:
             raise ValueError('there are no `strings`')
-        return preprocessing.stack(encoded_strings, None, np.int32, 0)[0]
+        return preprocessing.stack(encoded_strings, [wordlen or -1], np.int32, 0)[0]
 
     return oov, charmap, charencoder
 

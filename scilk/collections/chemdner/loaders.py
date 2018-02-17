@@ -66,7 +66,7 @@ def load_tokeniser(collection, data) \
             raise ValueError('empty strings are not allowed')
         # ensure that there are at lest `batchsize` texts_
         ndummy = max(0, batchsize - len(texts))
-        texts_ = texts + [str(None)] * ndummy
+        texts_ = [*texts, *[str(None)]*ndummy]
         # encode data
         encoded_texts = np.array(list(map(text_encoder, texts_)))
         bins = preprocessing.binpack(batchsize, len, encoded_texts)
