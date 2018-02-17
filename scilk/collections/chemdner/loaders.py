@@ -86,8 +86,8 @@ def load_tokeniser(collection, data) \
         stiched_ivs = [segments.stitch(tks, points)
                        for tks, points in zip(primary_tokens, stiches)]
         return [
-            [iv.reload(text[iv.start:iv.stop]) for iv in stiched]
-            for text, stiched in zip(texts_, stiched_ivs)
+            [iv.reload(text[iv.start:iv.stop]) for iv in stitched]
+            for text, stitched in zip(texts_, stiched_ivs)
         ][:len(texts)]
 
     return tokenise
