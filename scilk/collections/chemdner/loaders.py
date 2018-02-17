@@ -70,7 +70,7 @@ def load_tokeniser(collection, data) \
         # encode data
         encoded_texts = np.array(list(map(text_encoder, texts_)))
         bins = preprocessing.binpack(batchsize, len, encoded_texts)
-        merged = common.merge_bins(encoded_texts, bins)
+        merged = common.merge_bins(encoded_texts, bins, np.int32)
         chunks = preprocessing.chunksteps(chunksize, merged)
         # primary tokenisation
         primary_tokens = (F(map, primary_tokeniser) >> list)(texts_)
