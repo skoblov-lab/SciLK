@@ -4,7 +4,6 @@ from itertools import chain
 from typing import Sequence, Iterable, TypeVar, List, Tuple, Callable, Mapping, Union
 
 import numpy as np
-from multipledispatch import dispatch
 from fn import F
 import pandas as pd
 
@@ -26,7 +25,6 @@ def asciicharset(strings: Iterable[str]) -> List[str]:
 
 
 # TODO specify all exception in the docs
-# TODO patch dispatcher namespace overlapping
 
 
 def build_charencoder(corpus: Iterable[str], wordlen: int=None) \
@@ -64,15 +62,12 @@ def build_charencoder(corpus: Iterable[str], wordlen: int=None) \
         return np.fromiter((charmap.get(char, oov) for char in string), np.int32,
                            len(string))
 
-    @dispatch(str)
-    def charencoder(string: str) -> np.ndarray:
-        return encode_string(string)
-
-    @dispatch(Iterable)
-    def charencoder(strings: Iterable[str]):
-        encoded_strings = list(map(encode_string, strings))
+    def charencoder(target: Union[str, Iterable[str]]):
+        if isinstance(target, str):
+            return encode_string(target)
+        encoded_strings = list(map(encode_string, target))
         if not encoded_strings:
-            raise ValueError('there are no `strings`')
+            raise ValueError('there are no `target`')
         return preprocessing.stack(
             encoded_strings, [wordlen or -1], np.int32, 0, True)[0]
 
@@ -96,22 +91,19 @@ def build_wordencoder(embeddings: pd.DataFrame, transform: Callable[[str], str])
     if not all(isinstance(word, str) for word in wordmap):
         raise ValueError('`embeddings` can be indexed by strings alone')
     oov = wordmap[embeddings.index[-1]]
-    vectors = embeddings.as_matrix().astype(np.float32)
+    vectors = embeddings.as_matrix()
 
     def index(word: str) -> int:
         if not word:
             raise ValueError("can't encode empty words")
         return wordmap.get(transform(word), oov)
 
-    @dispatch(str)
-    def wordencoder(word: str) -> np.ndarray:
-        return vectors[index(word)]
-
-    @dispatch(Iterable)
-    def wordencoder(words: Iterable[str]) -> np.ndarray:
-        indices = list(map(index, words))
+    def wordencoder(target: Union[str, Iterable[str]]) -> np.ndarray:
+        if isinstance(target, str):
+            return vectors[index(target)]
+        indices = list(map(index, target))
         if not indices:
-            raise ValueError('there are no `words`')
+            raise ValueError('there are no `target`s')
         return np.vstack(vectors[indices])
 
     return wordencoder
