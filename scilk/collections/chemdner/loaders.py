@@ -65,7 +65,7 @@ def load_tokeniser(collection, data) \
         if not all(texts):
             raise ValueError('empty strings are not allowed')
         # ensure that there are at lest `batchsize` texts_
-        ndummy = min(0, batchsize - len(texts))
+        ndummy = max(0, batchsize - len(texts))
         texts_ = texts + [str(None)] * ndummy
         # encode data
         encoded_texts = np.array(list(map(text_encoder, texts_)))
