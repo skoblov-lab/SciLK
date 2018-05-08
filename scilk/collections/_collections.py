@@ -1,6 +1,6 @@
 """
 
-
+This module is purely experimental. We are going to use it for IO prototyping.
 
 """
 

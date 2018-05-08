@@ -10,7 +10,7 @@ from hypothesis import settings, strategies as st
 
 from scilk.corpora import genia
 from scilk.util import intervals
-from scilk.collections import collections
+from scilk.collections import _collections
 import scilk
 
 MAX_TESTS = 1000
@@ -21,7 +21,7 @@ MAX_TESTS = 1000
 texts = st.text(st.characters(min_codepoint=32, max_codepoint=255), 0, 500, 1000)
 
 
-def loader_caller(collection: collections.Collection, data=None):
+def loader_caller(collection: _collections.Collection, data=None):
 
     def caller(value: str):
         return collection.translate(value)
@@ -29,7 +29,7 @@ def loader_caller(collection: collections.Collection, data=None):
     return caller
 
 
-def loader_translate(collection: collections.Collection, data: dict):
+def loader_translate(collection: _collections.Collection, data: dict):
     mapping = joblib.load(data['mapping'])
 
     def translate(value: str):
@@ -87,12 +87,12 @@ class TestCollection(unittest.TestCase):
             mapping = dict(test='OK')
             mapping_path = os.path.join(dirpath, 'mapping.joblib')
             joblib.dump(mapping, mapping_path)
-            collection = collections.Collection()
+            collection = _collections.Collection()
             collection.add('translate', loader_translate, dict(mapping=mapping_path))
             collection.add('caller', loader_caller)
             self.assertAlmostEqual(collection.caller('test'), 'OK')
             collection.save(name='test')
-            collection = collections.Collection.load('test')
+            collection = _collections.Collection.load('test')
             self.assertAlmostEqual(collection.caller('test'), 'OK')
             self.assertEquals({'translate', 'caller'}, set(collection.entries))
 
