@@ -1,4 +1,3 @@
-import operator as op
 import csv
 from itertools import chain
 from typing import Sequence, Iterable, TypeVar, List, Tuple, Callable, Mapping, Union
@@ -7,7 +6,8 @@ import numpy as np
 from fn import F
 import pandas as pd
 
-from scilk.util import preprocessing, intervals
+from scilk.util import preprocessing
+from scilk.util.binning import unbin, unmerge_bins
 
 T = TypeVar('T')
 
@@ -25,7 +25,6 @@ def asciicharset(strings: Iterable[str]) -> List[str]:
 
 
 # TODO specify all exception in the docs
-
 
 def build_charencoder(corpus: Iterable[str], wordlen: int=None) \
         -> Tuple[int,  Mapping[str, int], TextEncoder]:
@@ -119,59 +118,6 @@ def read_glove(path: str) -> pd.DataFrame:
         path, sep=' ', index_col=0, header=None, quoting=csv.QUOTE_NONE,
         na_values=None, keep_default_na=False
     ).astype(np.float32)
-
-
-def merge_bins(sources: Union[np.ndarray, Sequence[np.ndarray]],
-               bins: Sequence[Sequence[int]], dtype=None) -> np.ndarray:
-    """
-    Merge sources within bins and stack them on top of each other.
-    :param sources: a Sequence of source arrays.
-    :param bins: a Sequence of bins: Sequences of indices referencing
-    arrays in `sources`.
-    :param dtype: numpy data type; if None `sources[0].dtype` will be used
-    instead
-    :return: a merged arrays
-    """
-    if not len(sources):
-        raise ValueError('no `sources`')
-    extracted = (
-            F(preprocessing.binextract) >> (map, np.concatenate) >> list
-    )(sources, bins)
-    return preprocessing.stack(extracted, None,
-                               dtype=(dtype or sources[0].dtype))[0]
-
-
-def unbin(binned: Iterable[Iterable[T]], bins: Iterable[Iterable[int]]) \
-        -> List[T]:
-    """
-    Revert binning: transform a nested Iterable of objects (i.e. objects packed
-    into bins) into a list of objects ordered the same way as the original
-    Sequence
-    :param binned: a nested Iterable of binned objects
-    :param bins: a nested Iterable of bins: Iterables of indices referencing
-    objects in the original Sequence
-    :return:
-    """
-    return (F(map, chain.from_iterable) >>
-            (lambda x: zip(*x)) >>
-            F(sorted, key=op.itemgetter(0)) >>
-            (map, op.itemgetter(1)) >> list)([bins, binned])
-
-
-def unmerge_bins(merged: np.ndarray, bins: Sequence[Sequence[int]],
-                 lengths: Sequence[int]) -> List[List[np.ndarray]]:
-    """
-    Breaks `merged` into binned objects corresponding to the original objects
-    in a binned Sequence
-    :param merged: a merged representation of binned data
-    :param bins: a Sequence of bins: Sequences of indices referencing
-    :param lengths: lengths of the original source objects
-    :return:
-    """
-    lengths_ = np.array(lengths)
-    indices = [lengths_[bin_] for bin_ in bins]
-    return [list(np.split(line, np.cumsum(l_indices)))[:-1]
-            for line, l_indices in zip(merged, indices)]
 
 
 def decode_merged_predictions(merged: np.ndarray, bins: Sequence[Sequence[int]],

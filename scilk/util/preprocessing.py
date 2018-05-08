@@ -8,12 +8,9 @@
 import operator as op
 from itertools import chain, repeat, count
 from math import ceil
-from numbers import Number
-from typing import List, Tuple, Optional, TypeVar, Callable, \
-    Sequence, Union
+from typing import List, Tuple, Optional, TypeVar, Sequence
 
 import numpy as np
-from binpacking import to_constant_bin_number
 from fn import F
 
 
@@ -129,51 +126,10 @@ def maskfalse(array: np.ndarray, mask: np.ndarray) -> np.ndarray:
     return copy
 
 
-def binpack(nbins: int, weight: Callable[[T], Number], items: Sequence[T]) \
-        -> List[List[int]]:
-    """
-    Pack items into n bins while minimising the variance of weight accumulated
-    in each bin. The function uses a greedy algorithm, which doesn't not
-    guarantee a perfect result.
-    :param nbins: the number of bins to create
-    :param weight: a weight function
-    :param items: items to pack; since the function returns bins packed with
-    positions inferred from iteration order, iteration over `items` must be
-    stable for the output to be useful.
-    :return: a nested list of integers representing positions in `items`
-    """
-    if len(items) < nbins:
-        raise ValueError('There should be at lest `nbins` items')
-    weighted = [(i, weight(item)) for i, item in enumerate(items)]
-    return (F(map, F(map, op.itemgetter(0)) >> list) >> list)(
-        to_constant_bin_number(weighted, nbins, weight_pos=1)
-    )
-
-
-def binextract(source: Union[Sequence[T], np.ndarray], bins: Sequence[Sequence[int]]) \
-        -> Union[List[List[T]], List[np.ndarray]]:
-    """
-    'Materialise' bins, i.e. transform a nested list of indices into bins of
-    source items. See `binpack` for additional info.
-    :param source: source items
-    :param bins: a nested sequence if integers - indices referring to object
-    from `source`
-    :return:
-    """
-    if not isinstance(source, (Sequence, np.ndarray)):
-        raise ValueError('`source` must be either a Sequence or a numpy array')
-    try:
-        return (
-            [source[bin_] for bin_ in bins] if isinstance(source, np.ndarray) else
-            [[source[i] for i in bin_] for bin_ in bins]
-        )
-    except IndexError:
-        raise ValueError('`bins` contain indices outside of the `source` range')
-
-
 def chunksteps(size: int, array: np.ndarray, filler=0) -> np.ndarray:
     """
-    Chunk time steps
+    Chunk time steps, that is break an array into fixed-size slices along the
+    second dimension (array.shape[1]).
     :param size: chunk size
     :param array: an array to chunk. The array must have at lest two dimensions
     :param filler: a value to fill in the empty space in the last chunk if
