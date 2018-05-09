@@ -120,10 +120,10 @@ def align_abstracts(abstracts: Iterable[AbstractText],
             for abstract in abstracts)
 
 
-def parse(abstracts: str, annotations: str, borders: str) -> List[Abstract]:
+def parse(abstracts: str, annotations: str=None, borders: str=None) -> List[Abstract]:
     return list(align_abstracts(parse_abstracts(abstracts),
-                                parse_annotations(annotations),
-                                parse_borders(borders)))
+                                parse_annotations(annotations) if annotations else None,
+                                parse_borders(borders) if borders else None))
 
 
 if __name__ == '__main__':

@@ -17,6 +17,9 @@ from scilk.util.networks import blocks, wrappers
 from scilk.collections import common
 
 
+__all__ = ['load_detector', 'load_tokeniser']
+
+
 def load_tokeniser(data) \
         -> Callable[[List[str]], List[List[intervals.Interval[str]]]]:
     # load char encoder
@@ -86,7 +89,8 @@ def load_tokeniser(data) \
             layer.reset_states()
         # predict and decode stitch points
         predicted = model.predict(np.vstack(chunks), batch_size=batchsize)
-        reshaped = np.concatenate(predicted.reshape((-1, 64, 256)), axis=1)
+        original_shape = (-1, batchsize,  chunksize)
+        reshaped = np.concatenate(predicted.reshape(original_shape), axis=1)
         textlens = list(map(len, texts_))
         stiches = decode(reshaped, bins, textlens)
         # stitch primary tokens
@@ -119,47 +123,55 @@ def load_detector(data):
 
     # character block
     inputs_char = layers.Input(batch_shape=(batchsize, chunksize, wordlen))
-    char_embeddings = blocks.charemb(maxchar + 1, chunksize, charemb_dim,
+    char_embeddings = blocks.charemb(maxchar+1, chunksize, charemb_dim,
                                      charemb_units, 0.3, 0.3, mask=False,
                                      layer=layers.GRU)(inputs_char)
-    char_conv_narrow = blocks.cnn([256, 256], 3, [0.3, None],
-                                  name_template='narrowcharconv{}')(
-        char_embeddings)
-    inputs_word = layers.Input(
-        batch_shape=(batchsize, chunksize, wordemb_dim))
-    word_conv_narrow = blocks.cnn([256, 256], 3, [0.3, None],
-                                  name_template='narrowwordconv{}')(inputs_word)
+    char_conv = blocks.cnn([256, 256], 3, [0.3, None],
+                           name_template='narrowcharconv{}')(char_embeddings)
 
+    # word block
+    inputs_word = layers.Input(batch_shape=(batchsize, chunksize, wordemb_dim))
+    word_conv = blocks.cnn([256, 256], 3, [0.3, None],
+                           name_template='narrowwordconv{}')(inputs_word)
+
+    # join CNN-extracted features and reshape
     def reshape(shape, layer):
         return layers.Lambda(
             lambda incomming: K.reshape(incomming, shape=shape)
         )(layer)
 
     feat_shape = [batchsize, chunksize, -1]
-    feat_layers = [char_conv_narrow, word_conv_narrow]
+    feat_layers = [char_conv, word_conv]
     features = reshape(feat_shape, layers.concatenate(feat_layers, axis=-1))
-    rnn_common1 = wrappers.HalfStatefulBidirectional(
+
+    # RNN-blocks shared by two output nodes
+    rnn_shared1 = wrappers.HalfStatefulBidirectional(
         layers.GRU(32, stateful=True, dropout=0.3, recurrent_dropout=0.3,
                    return_sequences=True))
-    rnn_common2 = wrappers.HalfStatefulBidirectional(
+    rnn_shared2 = wrappers.HalfStatefulBidirectional(
         layers.GRU(32, stateful=True, dropout=0.3, recurrent_dropout=0.3,
                    return_sequences=True))
-    common_rnn_layers = [rnn_common1, rnn_common2]
-    rnn_common = reduce(lambda graph, layer: layer(graph), common_rnn_layers,
+    shared_rnn_layers = [rnn_shared1, rnn_shared2]
+    rnn_shared = reduce(lambda graph, layer: layer(graph), shared_rnn_layers,
                         features)
+
+    # separate branch for parts-detection
     rnn_parts = wrappers.HalfStatefulBidirectional(
         layers.GRU(32, stateful=True, dropout=0.3, recurrent_dropout=0.3,
                    return_sequences=True))
-    labels_parts = layers.Dense(1, activation='sigmoid')(rnn_parts(rnn_common))
-    attention = reshape(feat_shape, layers.multiply([labels_parts, rnn_common]))
+    labels_parts = layers.Dense(1, activation='sigmoid')(rnn_parts(rnn_shared))
+    attention = reshape(feat_shape, layers.multiply([labels_parts, rnn_shared]))
+    # separate branch for starts-detection
     rnn_starts = wrappers.HalfStatefulBidirectional(
         layers.GRU(32, stateful=True, dropout=0.3, recurrent_dropout=0.3,
                    return_sequences=True))
     labels_starts = layers.Dense(1, activation='sigmoid')(rnn_starts(attention))
+
+    # compile the model
     model = models.Model([inputs_char, inputs_word], [labels_parts, labels_starts])
     model.compile(optimizer='Adam', loss='binary_crossentropy')
-    model.load_weights(data['weights'])
-    stateful_layers = [*common_rnn_layers, rnn_parts, rnn_starts]
+    model.load_weights(data['ner_weights'])
+    stateful_layers = [*shared_rnn_layers, rnn_parts, rnn_starts]
 
     def decode(samples, merged_starts: np.ndarray, merged_parts: np.ndarray,
                bins: Sequence[Sequence[int]],
@@ -199,7 +211,7 @@ def load_detector(data):
             raise ValueError('empty texts are not allowed')
         # ensure that there are at lest `batchsize` texts_
         ndummy = max(0, batchsize - len(texts))
-        texts_ = [*texts, *[[str(None)]]*ndummy]
+        texts_ = [*(F(map, intervals.unload) >> (map, list))(texts), *[[str(None)]]*ndummy]
         # bin texts
         bins = binning.binpack(batchsize, len, texts_)
         # encode data
