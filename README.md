@@ -60,6 +60,6 @@ loading and using the models.
 
 ### Training new models
 
-You will find all the usage guides you might need in the `notebooks` subdirectory.
-Take note, that almost all function used in the core package are heavily
+You will find all the guidance you might need in the `notebooks` subdirectory.
+Take note, that almost all functions from the core package are heavily
 documented and type-annotated.
