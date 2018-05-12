@@ -19,7 +19,7 @@ environment by issuing this command:
     $ conda create -n scilk-chem python=3.6
     
 You can use `virtualenv` just as well, though take note that SciLK requires
-Python 3.6 to run properly. After you've have created and activated a new 
+Python 3.6 to run properly. After you have created and activated a new 
 Python 3.6 environment issue these commands:
 
     (scilk-chem) $ git clone -b chemdner-pub https://github.com/skoblov-lab/SciLK.git

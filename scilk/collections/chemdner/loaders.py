@@ -74,7 +74,7 @@ def load_tokeniser(data) \
             raise ValueError('there are no `texts`')
         if not all(texts):
             raise ValueError('empty strings are not allowed')
-        # ensure that there are at lest `batchsize` texts_
+        # ensure that there are at least `batchsize` texts_
         ndummy = max(0, batchsize - len(texts))
         texts_ = [*texts, *[str(None)]*ndummy]
         # encode data
@@ -209,7 +209,7 @@ def load_detector(data):
             raise ValueError('there are no `texts`')
         if not all(texts):
             raise ValueError('empty texts are not allowed')
-        # ensure that there are at lest `batchsize` texts_
+        # ensure that there are at least `batchsize` texts_
         ndummy = max(0, batchsize - len(texts))
         texts_ = [*(F(map, intervals.unload) >> (map, list))(texts), *[[str(None)]]*ndummy]
         # bin texts
@@ -237,6 +237,7 @@ def load_detector(data):
         return decode(texts, reshaped_starts, reshaped_parts, bins, list(map(len, texts)))
 
     return detect
+
 
 def load_sentence_segmenter(data):
     pass
