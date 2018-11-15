@@ -16,7 +16,7 @@ if sys.version_info < (3, 5, 2):
 setup(
     name="scilk",
     version="0.1a1",
-    packages=find_packages("./"),
+    packages=find_packages(),
     scripts=[],
     install_requires=["numpy==1.14.0",
                       "h5py==2.7.1",
