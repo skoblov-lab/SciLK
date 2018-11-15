@@ -1,15 +1,16 @@
+import operator as op
+import re
+from functools import reduce
 from itertools import starmap
 from typing import Sequence, NamedTuple, Tuple, Iterable, Text, Optional, List, \
     Iterator
 from xml.etree import ElementTree as ETree
 
-import operator as op
-import re
-from functools import reduce
 from pyrsistent import v, pvector
 
-from scilk.corpora.corpus import AbstractAnnotation, AbstractText, AbstractSentenceBorders, \
-    AnnotationError, LabeledInterval, Abstract, SentenceBorders
+from scilk.corpora.corpus import AbstractAnnotation, AbstractText, \
+    AbstractSentenceBorders, AnnotationError, LabeledInterval, Abstract, \
+    SentenceBorders, UTF8
 from scilk.util.intervals import Interval
 
 ANNO_PATT = re.compile('G#(\w+)')
@@ -132,7 +133,7 @@ def _parse_sentences(root: ETree.Element) \
     return text, annotation, borders
 
 
-def parse(path: Text) -> List[Abstract]:
+def parse(path: Text, encoding=UTF8) -> List[Abstract]:
     """
     Extract text from xml file `path`.
     :param path: xml file's path
@@ -173,9 +174,10 @@ def parse(path: Text) -> List[Abstract]:
         sent_borders = AbstractSentenceBorders(id_, title_sent, body_sent)
         return abstract, annotation, sent_borders
 
-    corpus = ETree.parse(path)
-    articles = accumulate_articles(corpus)
-    return list(starmap(parse_article, articles))
+    with open(path, encoding=encoding) as buffer:
+        corpus = ETree.parse(buffer)
+        articles = accumulate_articles(corpus)
+        return list(starmap(parse_article, articles))
 
 
 if __name__ == '__main__':

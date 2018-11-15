@@ -12,11 +12,11 @@ import pandas as pd
 from fn import F
 
 from scilk.corpora.corpus import TITLE, BODY, Abstract, AbstractAnnotation, \
-    AbstractText, AbstractSentenceBorders
+    AbstractText, AbstractSentenceBorders, UTF8
 from scilk.util.intervals import Interval
 
 
-def parse_abstracts(path: Text) -> List[AbstractText]:
+def parse_abstracts(path: Text, encoding=UTF8) -> List[AbstractText]:
     """
     Read chemdner abstracts
     :return: list[(abstract id, title, body)]
@@ -26,13 +26,13 @@ def parse_abstracts(path: Text) -> List[AbstractText]:
     >>> all(id_ in ids for id_, *_ in abstracts)
     True
     """
-    with open(path) as buffer:
+    with open(path, encoding=encoding) as buffer:
         parsed_buffer = (line.strip().split('\t') for line in buffer)
         return [AbstractText(int(id_), title.rstrip(), body.rstrip())
                 for id_, title, body in parsed_buffer]
 
 
-def parse_annotations(path: Text) -> List[AbstractAnnotation]:
+def parse_annotations(path: Text, encoding=UTF8) -> List[AbstractAnnotation]:
     # TODO log empty annotations
     # TODO more tests
     """
@@ -60,7 +60,7 @@ def parse_annotations(path: Text) -> List[AbstractAnnotation]:
         id_, src, start, stop, text, label = line.split('\t')
         return int(id_), src, int(start), int(stop), text, label
 
-    with open(path) as buffer:
+    with open(path, encoding=encoding) as buffer:
         parsed_lines = map(parse_line, map(str.strip, buffer))
         lines_sorted = sorted(
             parsed_lines, key=lambda x: (-x[0], x[1], -x[2]), reverse=True)
@@ -79,7 +79,7 @@ def parse_annotations(path: Text) -> List[AbstractAnnotation]:
                 for id_, parts in mapped_parts]
 
 
-def parse_borders(path: Text) -> List[AbstractSentenceBorders]:
+def parse_borders(path: Text, encoding=UTF8) -> List[AbstractSentenceBorders]:
     def pack_borders(id_: int, borders_: pd.DataFrame):
         src_mapped = {
             src: [Interval(*map(int, b_str.split(':'))) for b_str in bs[2]]
@@ -89,7 +89,7 @@ def parse_borders(path: Text) -> List[AbstractSentenceBorders]:
         body_borders = src_mapped.get(BODY, [])
         return AbstractSentenceBorders(id_, title_borders, body_borders)
 
-    borders = pd.read_csv(path, sep='\t', header=None)
+    borders = pd.read_csv(path, sep='\t', header=None, encoding=encoding)
     return ([] if not len(borders) else
             [pack_borders(id_, bs) for id_, bs in borders.groupby(0)])
 
@@ -120,10 +120,15 @@ def align_abstracts(abstracts: Iterable[AbstractText],
             for abstract in abstracts)
 
 
-def parse(abstracts: str, annotations: str=None, borders: str=None) -> List[Abstract]:
-    return list(align_abstracts(parse_abstracts(abstracts),
-                                parse_annotations(annotations) if annotations else None,
-                                parse_borders(borders) if borders else None))
+def parse(abstracts: str, annotations: str=None, borders: str=None, encoding=UTF8) \
+        -> List[Abstract]:
+    return list(
+        align_abstracts(
+            parse_abstracts(abstracts, encoding),
+            parse_annotations(annotations, encoding) if annotations else None,
+            parse_borders(borders, encoding) if borders else None
+        )
+    )
 
 
 if __name__ == '__main__':

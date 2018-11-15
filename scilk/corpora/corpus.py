@@ -1,13 +1,16 @@
+import encodings
 from numbers import Integral
 from typing import Sequence, NamedTuple, Text, Iterable, Tuple, List, \
     Mapping, Optional
 from itertools import chain
+
 
 from fn import F
 
 from scilk.util import intervals
 
 
+UTF8 = encodings.utf_8.getregentry().name
 OTHER = "OTHER"
 TITLE = "T"
 BODY = "A"
