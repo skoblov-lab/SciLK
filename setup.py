@@ -27,7 +27,7 @@ setup(
                       "hypothesis",
                       "frozendict",
                       "joblib==0.11",
-                      "tensorflow==1.4.1",
+                      "tensorflow>=1.4,<1.5",
                       "keras==2.1.3",
                       "binpacking==1.3"]
 )
