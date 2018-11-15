@@ -7,4 +7,4 @@ models will be stored in separate stale branches until the master branch has
 matured. The list of such branches:
 
  - `chemdner-pub` - a text tokeniser and chemical named entity recognition model
- trained on the CHEMDNER corpus (publication pending).
+ trained on the CHEMDNER corpus (publication pending). **Update** We've added Windows support.
